@@ -8,9 +8,15 @@
 class Pixel_Adventure : public olc::PixelGameEngine {
 public:
 	//Sprites
+	std::unique_ptr<olc::Sprite> FullHeart;
+	std::unique_ptr<olc::Sprite> HalfHeart;
+	std::unique_ptr<olc::Sprite> EmptyHeart;
 	std::unique_ptr<olc::Sprite> ArcherRight;
 	std::unique_ptr<olc::Sprite> ArcherLeft;
 	//Decals
+	olc::Decal* FullHeartDecal;
+	olc::Decal* HalfHeartDecal;
+	olc::Decal* EmptyHeartDecal;
 	olc::Decal* ArcherRightDecal;
 	olc::Decal* ArcherLeftDecal;
 	//GameState
@@ -18,11 +24,49 @@ public:
 	GameStateEnum GameState = MENU;
 	//Main Menu
 	int Selection = 0;
-	//Archer Variables
+	//Character Variables
 	olc::vf2d ArcherPos = { 300.0f, 300.0f };
 	bool ArcherDir = true;
+	int CharacterHealth = 6;
 	Pixel_Adventure() {
 		sAppName = "Pixel Adventure";
+	}
+	void DrawCharacterHealth() {
+		if (CharacterHealth == 6) {
+			DrawDecal({ 10.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 47.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 84.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
+		}
+		if (CharacterHealth == 5) {
+			DrawDecal({ 10.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 47.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 84.0f, 534.0f }, HalfHeartDecal, { 1.0f, 1.0f });
+		}
+		if (CharacterHealth == 4) {
+			DrawDecal({ 10.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 47.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
+		}
+		if (CharacterHealth == 3) {
+			DrawDecal({ 10.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 47.0f, 534.0f }, HalfHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
+		}
+		if (CharacterHealth == 2) {
+			DrawDecal({ 10.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 47.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
+		}
+		if (CharacterHealth == 1) {
+			DrawDecal({ 10.0f, 534.0f }, HalfHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 47.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
+		}
+		if (CharacterHealth <= 0) {
+			DrawDecal({ 10.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 47.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
+			DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
+		}
 	}
 	void UserInput(float PlayerSpeed, float fElapsedTime) {
 		if ((GetKey(olc::Key::LEFT).bHeld || (GetKey(olc::Key::A).bHeld)) && ArcherPos.x < 965 && ArcherPos.x > -8) {
@@ -53,6 +97,9 @@ public:
 		}
 		if (GetKey(olc::Key::ESCAPE).bPressed) {
 			GameState = EXIT;
+		}
+		if (GetMouse(0).bPressed) {
+			CharacterHealth--;
 		}
 	}
 	void MainMenu() {
@@ -107,6 +154,7 @@ public:
 		float PlayerSpeed = 400 * fElapsedTime;
 
 		UserInput(PlayerSpeed, fElapsedTime);
+		DrawCharacterHealth();
 
 		std::string ArcherX = std::to_string(ArcherPos.x);
 		std::string ArcherY = std::to_string(ArcherPos.y);
@@ -142,9 +190,15 @@ private:
 	bool OnUserCreate() override {
 
 		//Sprites
+		FullHeart = std::make_unique<olc::Sprite>("./Sprites/FullHeart.png");
+		HalfHeart = std::make_unique<olc::Sprite>("./Sprites/HalfHeart.png");
+		EmptyHeart = std::make_unique<olc::Sprite>("./Sprites/EmptyHeart.png");
 		ArcherRight = std::make_unique<olc::Sprite>("./Sprites/ArcherRight.png");
 		ArcherLeft = std::make_unique<olc::Sprite>("./Sprites/ArcherLeft.png");
 		//Decals
+		FullHeartDecal = new olc::Decal(FullHeart.get());
+		HalfHeartDecal = new olc::Decal(HalfHeart.get());
+		EmptyHeartDecal = new olc::Decal(EmptyHeart.get());
 		ArcherRightDecal = new olc::Decal(ArcherRight.get());
 		ArcherLeftDecal = new olc::Decal(ArcherLeft.get());
 		return true;
