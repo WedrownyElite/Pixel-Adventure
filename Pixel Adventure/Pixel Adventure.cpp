@@ -23,7 +23,7 @@ public:
 	olc::Decal* ArcherLeftDecal;
 	//GameState
 	enum GameStateEnum { DEBUG, GAME, PAUSED, EXIT, MENU };
-	GameStateEnum GameState = MENU;
+	std::vector<GameStateEnum> GameState;
 	//Main Menu
 	int Selection = 0;
 	//Character Variables
@@ -117,7 +117,8 @@ public:
 			ArcherPos.y = -4;
 		}
 		if (GetKey(olc::Key::ESCAPE).bPressed) {
-			GameState = PAUSED;
+			GameState[1] = GameState[0];
+			GameState[0] = PAUSED;
 		}
 		if (GetMouse(0).bPressed) {
 			CharacterHealth--;
@@ -125,13 +126,13 @@ public:
 	}
 	void PauseScreenInputs(bool resume_hovered, bool options_hovered, bool quit_hovered) {
 		if (GetMouse(0).bPressed && resume_hovered == true) {
-			GameState = DEBUG;
+			GameState[0] = GameState[1];
 		}
 		if (GetMouse(0).bPressed && options_hovered == true) {
 
 		}
 		if (GetMouse(0).bPressed && quit_hovered == true) {
-			GameState = EXIT;
+			GameState[0] = EXIT;
 		}
 	}
 	void doPauseScreen() {
@@ -139,7 +140,7 @@ public:
 		const olc::vf2d scale = { 1.0f, 1.0f };
 		//Resume variables
 		const bool resume_hovered = (GetMouseX() >= 400 && GetMouseY() >= 158 && GetMouseX() <= 634 && GetMouseY() <= 194);
-		const float resume_zoom = resume_hovered ? 5.5f : 5.0f ;
+		const float resume_zoom = resume_hovered ? 5.5f : 5.0f;
 		const float resume_XCoord = resume_hovered ? 411.0f : 420.0f;
 		const float resume_YCoord = resume_hovered ? 168.0f : 170.0f;
 		//Options variables
@@ -201,13 +202,13 @@ public:
 			Selection = 1;
 		}
 		if (Selection == 0 && GetKey(olc::Key::ENTER).bPressed) {
-			GameState = GAME;
+			GameState[0] = GAME;
 		}
 		if (Selection == 1 && GetKey(olc::Key::ENTER).bPressed) {
-			GameState = DEBUG;
+			GameState[0] = DEBUG;
 		}
 		if (GetKey(olc::Key::ESCAPE).bPressed) {
-			GameState = EXIT;
+			GameState[0] = EXIT;
 		}
 	}
 	void GameGameState(float fElapsedTime) {
@@ -245,27 +246,30 @@ public:
 		DrawCharacterHealth();
 	}
 	bool OnUserUpdate(float fElapsedTime) override {
-		if (GameState == MENU) {
+		if (GameState[0] == MENU) {
 			MainMenu();
 			return true;
 		}
-		if (GameState == GAME) {
+		if (GameState[0] == GAME) {
 			GameGameState(fElapsedTime);
 			return true;
 		}
-		if (GameState == DEBUG) {
+		if (GameState[0] == DEBUG) {
 			DebugGameState(fElapsedTime);
 			return true;
 		}
-		if (GameState == PAUSED) {
+		if (GameState[0] == PAUSED) {
 			doPauseScreen();
 		}
-		if (GameState == EXIT) {
+		if (GameState[0] == EXIT) {
 			return false;
 		}
 	}
 private:
 	bool OnUserCreate() override {
+
+		GameState.push_back(MENU);
+		GameState.push_back(MENU);
 
 		//Sprites
 		PauseScreen = std::make_unique<olc::Sprite>("./Sprites/PauseScreen.png");
