@@ -186,8 +186,12 @@ public:
 		}
 		return PlayerPos;
 	}
-	GameStateEnum EscapeInput() {
-
+	GameStateEnum EscapeInput(olc::PixelGameEngine* pge) {
+		if (pge->GetKey(olc::Key::ESCAPE).bPressed) {
+			GameState[1] = GameState[0];
+			GameState[0] = PAUSED;
+		}
+		return GameState[0], GameState[1];
 	}
 	int HealthTest(olc::PixelGameEngine* pge, int CharacterHealth) {
 		if (pge->GetMouse(0).bPressed) {
@@ -432,6 +436,7 @@ public:
 
 		PlayerPos = Player.Input(this, PlayerSpeed, CharacterHealth);
 		CharacterHealth = Player.HealthTest(this, CharacterHealth);
+		GameState[0] = Player.EscapeInput(this);
 
 		DrawBGCamera();
 
