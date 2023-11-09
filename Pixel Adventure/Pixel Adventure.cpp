@@ -14,6 +14,30 @@
 
 #include <random>
 
+class Player : public olc::PixelGameEngine {
+public:
+	//Sprites
+	std::unique_ptr<olc::Sprite> ArcherRight;
+	std::unique_ptr<olc::Sprite> ArcherLeft;
+
+	//Decals
+	olc::Decal* ArcherRightDecal;
+	olc::Decal* ArcherLeftDecal;
+
+	olc::vf2d PlayerPos;
+	bool ArcherDir;
+
+	void Draw(olc::TileTransformedView tv) {
+		//Draw Archer
+		if (ArcherDir == true) {
+			tv.DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
+		}
+		if (ArcherDir == false) {
+			tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
+		}
+	}
+};
+
 class Pixel_Adventure : public olc::PixelGameEngine {
 public:
 
@@ -57,6 +81,7 @@ public:
 	Pixel_Adventure() {
 		sAppName = "Pixel Adventure";
 	}
+
 
 	//User inputs
 	void UserInput(float PlayerSpeed, float fElapsedTime) {
@@ -292,12 +317,7 @@ public:
 		DrawBGCamera();
 
 		//Draw Archer
-		if (ArcherDir == true) {
-			tv.DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
-		}
-		if (ArcherDir == false) {
-			tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
-		}
+		Player::Draw(tv);
 
 		//Draw variables
 		DrawDebugVariables();
