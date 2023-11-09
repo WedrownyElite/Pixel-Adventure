@@ -14,7 +14,7 @@
 
 #include <random>
 
-class Player : public olc::PixelGameEngine {
+class Player {
 public:
 	//Sprites
 	std::unique_ptr<olc::Sprite> ArcherRight;
@@ -25,9 +25,9 @@ public:
 	olc::Decal* ArcherLeftDecal;
 
 	olc::vf2d PlayerPos;
-	bool ArcherDir;
+	bool ArcherDir = true;
 
-	void Draw(olc::TileTransformedView tv) {
+	void Draw(olc::TileTransformedView& tv) {
 		//Draw Archer
 		if (ArcherDir == true) {
 			tv.DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
@@ -35,6 +35,14 @@ public:
 		if (ArcherDir == false) {
 			tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
 		}
+	}
+	void Initialize(olc::PixelGameEngine* pge) {
+		//Sprites
+		ArcherRight = std::make_unique<olc::Sprite>("./Sprites/ArcherRight.png");
+		ArcherLeft = std::make_unique<olc::Sprite>("./Sprites/ArcherLeft.png");
+		//Decals
+		ArcherRightDecal = new olc::Decal(ArcherRight.get());
+		ArcherLeftDecal = new olc::Decal(ArcherLeft.get());
 	}
 };
 
@@ -77,6 +85,8 @@ public:
 	olc::utils::Camera2D camera;
 	// The world map, stored as a 1D array
 	std::vector<uint8_t> vWorldMap;
+
+	Player p;
 
 	Pixel_Adventure() {
 		sAppName = "Pixel Adventure";
@@ -317,7 +327,7 @@ public:
 		DrawBGCamera();
 
 		//Draw Archer
-		Player::Draw(tv);
+		p.Draw(tv);
 
 		//Draw variables
 		DrawDebugVariables();
@@ -347,7 +357,8 @@ public:
 	}
 private:
 	bool OnUserCreate() override {
-
+		//Initialize player sprites/decals
+		p.Initialize(this);
 		// Construct transform view
 		tv = olc::TileTransformedView(GetScreenSize(), m_vTileSize);
 
@@ -374,16 +385,12 @@ private:
 		FullHeart = std::make_unique<olc::Sprite>("./Sprites/FullHeart.png");
 		HalfHeart = std::make_unique<olc::Sprite>("./Sprites/HalfHeart.png");
 		EmptyHeart = std::make_unique<olc::Sprite>("./Sprites/EmptyHeart.png");
-		ArcherRight = std::make_unique<olc::Sprite>("./Sprites/ArcherRight.png");
-		ArcherLeft = std::make_unique<olc::Sprite>("./Sprites/ArcherLeft.png");
 		//Decals
 		GrassDecal = new olc::Decal(Grass.get());
 		PauseScreenDecal = new olc::Decal(PauseScreen.get());
 		FullHeartDecal = new olc::Decal(FullHeart.get());
 		HalfHeartDecal = new olc::Decal(HalfHeart.get());
 		EmptyHeartDecal = new olc::Decal(EmptyHeart.get());
-		ArcherRightDecal = new olc::Decal(ArcherRight.get());
-		ArcherLeftDecal = new olc::Decal(ArcherLeft.get());
 		return true;
 	}
 };
