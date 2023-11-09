@@ -17,19 +17,6 @@
 class Pixel_Adventure : public olc::PixelGameEngine {
 public:
 
-	// Transformed view object to make world offsetting simple
-	olc::TileTransformedView tv;
-
-	// Conveninet constants to define tile map world
-	olc::vi2d m_vWorldSize = { 1000, 1000 };
-	olc::vi2d m_vTileSize = { 1024, 576 };
-
-	// The camera!
-	olc::utils::Camera2D camera;
-
-	// The world map, stored as a 1D array
-	std::vector<uint8_t> vWorldMap;
-
 	//Sprites
 	std::unique_ptr<olc::Sprite> Grass;
 	std::unique_ptr<olc::Sprite> PauseScreen;
@@ -56,7 +43,17 @@ public:
 	bool ArcherDir = true;
 	int CharacterHealth = 6;
 
-	std::mt19937 rng;
+	//Camera variables
+	// Transformed view object to make world offsetting simple
+	olc::TileTransformedView tv;
+	// Conveninet constants to define tile map world
+	olc::vi2d m_vWorldSize = { 1000, 1000 };
+	olc::vi2d m_vTileSize = { 32, 32 };
+	// The camera!
+	olc::utils::Camera2D camera;
+	// The world map, stored as a 1D array
+	std::vector<uint8_t> vWorldMap;
+
 	Pixel_Adventure() {
 		sAppName = "Pixel Adventure";
 	}
@@ -275,31 +272,31 @@ public:
 
 		//Draw Archer
 		if (ArcherDir == true) {
-			DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
+			tv.DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
 		}
 		if (ArcherDir == false) {
-			DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
+			tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
 		}
 	}
 	void DebugGameState(float fElapsedTime) {
+		//Speed
+		fElapsedTime = std::min(fElapsedTime, 0.16667f);
+		float PlayerSpeed = 8 * fElapsedTime;
+
+		//Camera variables
+		bool bOnScreen = camera.Update(fElapsedTime);
 		tv.SetWorldOffset(camera.GetViewPosition());
+
+		UserInput(PlayerSpeed, fElapsedTime);
 
 		DrawBGCamera();
 
-		bool bOnScreen = camera.Update(fElapsedTime);
-
-		DrawGrass();
-
-		fElapsedTime = std::min(fElapsedTime, 0.16667f);
-		float PlayerSpeed = 200 * fElapsedTime;
-
-		UserInput(PlayerSpeed, fElapsedTime);
 		//Draw Archer
 		if (ArcherDir == true) {
-			DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
+			tv.DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
 		}
 		if (ArcherDir == false) {
-			DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
+			tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
 		}
 
 		//Draw variables
@@ -347,8 +344,6 @@ private:
 		vWorldMap.resize(m_vWorldSize.x * m_vWorldSize.y);
 		for (int i = 0; i < vWorldMap.size(); i++)
 			vWorldMap[i] = ((rand() % 20) == 1) ? 1 : 0;
-
-		rng.seed(std::random_device()());
 
 		GameState.push_back(MENU);
 		GameState.push_back(MENU);

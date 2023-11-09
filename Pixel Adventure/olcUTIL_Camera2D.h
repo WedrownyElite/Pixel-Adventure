@@ -233,7 +233,7 @@ namespace olc::utils
 
 	protected:
 		// Position of camera focus point in the world
-		olc::vf2d m_vPosition;
+		olc::vf2d m_vPosition{ 300.0f, 300.0f };
 		// Rectangular size of camera viewing area
 		olc::vf2d m_vViewSize;
 		// Top left coordinate of camera viewing area
