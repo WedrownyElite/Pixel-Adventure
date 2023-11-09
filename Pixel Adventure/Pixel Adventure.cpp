@@ -1,13 +1,37 @@
+
 #define OLC_PGE_APPLICATION
-#define _USE_MATH_DEFINES
 #include "olcPixelGameEngine.h"
+
+#define OLC_PGEX_TRANSFORMEDVIEW
+#include "olcPGEX_TransformedView.h"
+
+#include "olcUTIL_Camera2D.h"
 #include <iostream>
 #include <vector>
+
+#define _USE_MATH_DEFINES
 #include <cmath>
+
+#include <random>
 
 class Pixel_Adventure : public olc::PixelGameEngine {
 public:
+
+	// Transformed view object to make world offsetting simple
+	olc::TileTransformedView tv;
+
+	// Conveninet constants to define tile map world
+	olc::vi2d m_vWorldSize = { 1000, 1000 };
+	olc::vi2d m_vTileSize = { 1024, 576 };
+
+	// The camera!
+	olc::utils::Camera2D camera;
+
+	// The world map, stored as a 1D array
+	std::vector<uint8_t> vWorldMap;
+
 	//Sprites
+	std::unique_ptr<olc::Sprite> Grass;
 	std::unique_ptr<olc::Sprite> PauseScreen;
 	std::unique_ptr<olc::Sprite> FullHeart;
 	std::unique_ptr<olc::Sprite> HalfHeart;
@@ -15,6 +39,7 @@ public:
 	std::unique_ptr<olc::Sprite> ArcherRight;
 	std::unique_ptr<olc::Sprite> ArcherLeft;
 	//Decals
+	olc::Decal* GrassDecal;
 	olc::Decal* PauseScreenDecal;
 	olc::Decal* FullHeartDecal;
 	olc::Decal* HalfHeartDecal;
@@ -27,30 +52,69 @@ public:
 	//Main Menu
 	int Selection = 0;
 	//Character Variables
-	olc::vf2d ArcherPos = { 300.0f, 300.0f };
+	olc::vf2d PlayerPos = { 300.0f, 300.0f };
 	bool ArcherDir = true;
 	int CharacterHealth = 6;
+
+	std::mt19937 rng;
 	Pixel_Adventure() {
 		sAppName = "Pixel Adventure";
 	}
-	void DrawDebugVariables() {
-		//ArcherPos
-		std::string ArcherX = std::to_string(ArcherPos.x);
-		std::string ArcherY = std::to_string(ArcherPos.y);
 
-		DrawStringDecal({ 10.0f, 10.0f }, "ArcherX", olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 140.0f, 10.0f }, ArcherX, olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 10.0f, 30.0f }, "ArcherY", olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 140.0f, 30.0f }, ArcherY, olc::WHITE, { 2.0f, 2.0f });
+	//User inputs
+	void UserInput(float PlayerSpeed, float fElapsedTime) {
+		if ((GetKey(olc::Key::LEFT).bHeld || (GetKey(olc::Key::A).bHeld)) && PlayerPos.x < 965 && PlayerPos.x > -8) {
+			PlayerPos.x -= PlayerSpeed;
+			ArcherDir = false;
+		}
+		if ((GetKey(olc::Key::RIGHT).bHeld || (GetKey(olc::Key::D).bHeld)) && PlayerPos.x < 965 && PlayerPos.x > -8) {
+			PlayerPos.x += PlayerSpeed;
+			ArcherDir = true;
+		}
+		if ((GetKey(olc::Key::UP).bHeld || (GetKey(olc::Key::W).bHeld)) && PlayerPos.y < 575 && PlayerPos.y > -5) {
+			PlayerPos.y -= PlayerSpeed;
+		}
+		if ((GetKey(olc::Key::DOWN).bHeld || (GetKey(olc::Key::S).bHeld)) && PlayerPos.y < 575 && PlayerPos.y > -5) {
+			PlayerPos.y += PlayerSpeed;
+		}
+		if (PlayerPos.x > 965) {
+			PlayerPos.x = 964;
+		}
+		if (PlayerPos.x < -8) {
+			PlayerPos.x = -7;
+		}
+		if (PlayerPos.y > 512) {
+			PlayerPos.y = 511;
+		}
+		if (PlayerPos.y < -5) {
+			PlayerPos.y = -4;
+		}
+		if (GetKey(olc::Key::ESCAPE).bPressed) {
+			GameState[1] = GameState[0];
+			GameState[0] = PAUSED;
+		}
+		if (GetMouse(0).bPressed) {
+			CharacterHealth--;
+		}
+	}
+	void PauseScreenInputs(bool resume_hovered, bool options_hovered, bool quit_hovered) {
+		if (GetMouse(0).bPressed && resume_hovered == true) {
+			GameState[0] = GameState[1];
+		}
+		if (GetMouse(0).bPressed && options_hovered == true) {
 
-		//MousePos
-		std::string MouseX = std::to_string(GetMouseX());
-		std::string MouseY = std::to_string(GetMouseY());
-
-		DrawStringDecal({ 10.0f, 60.0f }, "MouseX", olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 140.0f, 60.0f }, MouseX, olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 10.0f, 80.0f }, "MouseY", olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 140.0f, 80.0f }, MouseY, olc::WHITE, { 2.0f, 2.0f });
+		}
+		if (GetMouse(0).bPressed && quit_hovered == true) {
+			GameState[0] = EXIT;
+		}
+	}
+	//UI
+	void DrawGrass() {
+		for (int x = 0; x < 1024; x += 32) {
+			for (int y = 0; y < 576; y += 32) {
+				DrawDecal({ (float)x, (float)y }, GrassDecal);
+			}
+		}
 	}
 	void DrawCharacterHealth() {
 		if (CharacterHealth == 6) {
@@ -89,52 +153,6 @@ public:
 			DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
 		}
 	}
-	void UserInput(float PlayerSpeed, float fElapsedTime) {
-		if ((GetKey(olc::Key::LEFT).bHeld || (GetKey(olc::Key::A).bHeld)) && ArcherPos.x < 965 && ArcherPos.x > -8) {
-			ArcherPos.x -= PlayerSpeed;
-			ArcherDir = false;
-		}
-		if ((GetKey(olc::Key::RIGHT).bHeld || (GetKey(olc::Key::D).bHeld)) && ArcherPos.x < 965 && ArcherPos.x > -8) {
-			ArcherPos.x += PlayerSpeed;
-			ArcherDir = true;
-		}
-		if ((GetKey(olc::Key::UP).bHeld || (GetKey(olc::Key::W).bHeld)) && ArcherPos.y < 575 && ArcherPos.y > -5) {
-			ArcherPos.y -= PlayerSpeed;
-		}
-		if ((GetKey(olc::Key::DOWN).bHeld || (GetKey(olc::Key::S).bHeld)) && ArcherPos.y < 575 && ArcherPos.y > -5) {
-			ArcherPos.y += PlayerSpeed;
-		}
-		if (ArcherPos.x > 965) {
-			ArcherPos.x = 964;
-		}
-		if (ArcherPos.x < -8) {
-			ArcherPos.x = -7;
-		}
-		if (ArcherPos.y > 512) {
-			ArcherPos.y = 511;
-		}
-		if (ArcherPos.y < -5) {
-			ArcherPos.y = -4;
-		}
-		if (GetKey(olc::Key::ESCAPE).bPressed) {
-			GameState[1] = GameState[0];
-			GameState[0] = PAUSED;
-		}
-		if (GetMouse(0).bPressed) {
-			CharacterHealth--;
-		}
-	}
-	void PauseScreenInputs(bool resume_hovered, bool options_hovered, bool quit_hovered) {
-		if (GetMouse(0).bPressed && resume_hovered == true) {
-			GameState[0] = GameState[1];
-		}
-		if (GetMouse(0).bPressed && options_hovered == true) {
-
-		}
-		if (GetMouse(0).bPressed && quit_hovered == true) {
-			GameState[0] = EXIT;
-		}
-	}
 	void doPauseScreen() {
 
 		const olc::vf2d scale = { 1.0f, 1.0f };
@@ -157,10 +175,10 @@ public:
 		//Draw background (W.I.P)
 		//Draw Archer
 		if (ArcherDir == true) {
-			DrawDecal({ ArcherPos }, ArcherRightDecal, { 2.0f, 2.0f });
+			DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
 		}
 		if (ArcherDir == false) {
-			DrawDecal({ ArcherPos }, ArcherLeftDecal, { 2.0f, 2.0f });
+			DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
 		}
 
 		//Draw hearts
@@ -211,6 +229,44 @@ public:
 			GameState[0] = EXIT;
 		}
 	}
+	void DrawDebugVariables() {
+		//PlayerPos
+		std::string ArcherX = std::to_string(PlayerPos.x);
+		std::string ArcherY = std::to_string(PlayerPos.y);
+
+		DrawStringDecal({ 10.0f, 10.0f }, "ArcherX", olc::WHITE, { 2.0f, 2.0f });
+		DrawStringDecal({ 140.0f, 10.0f }, ArcherX, olc::WHITE, { 2.0f, 2.0f });
+		DrawStringDecal({ 10.0f, 30.0f }, "ArcherY", olc::WHITE, { 2.0f, 2.0f });
+		DrawStringDecal({ 140.0f, 30.0f }, ArcherY, olc::WHITE, { 2.0f, 2.0f });
+
+		//MousePos
+		std::string MouseX = std::to_string(GetMouseX());
+		std::string MouseY = std::to_string(GetMouseY());
+
+		DrawStringDecal({ 10.0f, 60.0f }, "MouseX", olc::WHITE, { 2.0f, 2.0f });
+		DrawStringDecal({ 140.0f, 60.0f }, MouseX, olc::WHITE, { 2.0f, 2.0f });
+		DrawStringDecal({ 10.0f, 80.0f }, "MouseY", olc::WHITE, { 2.0f, 2.0f });
+		DrawStringDecal({ 140.0f, 80.0f }, MouseY, olc::WHITE, { 2.0f, 2.0f });
+	}
+	void DrawBGCamera() {
+		// Render "tile map", by getting visible tiles
+		olc::vi2d vTileTL = tv.GetTopLeftTile().max({ 0,0 });
+		olc::vi2d vTileBR = tv.GetBottomRightTile().min(m_vWorldSize);
+		olc::vi2d vTile;
+
+		for (vTile.y = vTileTL.y; vTile.y < vTileBR.y; vTile.y++)
+			for (vTile.x = vTileTL.x; vTile.x < vTileBR.x; vTile.x++)
+			{
+				int idx = vTile.y * m_vWorldSize.x + vTile.x;
+
+				if (vWorldMap[idx] == 0)
+					tv.DrawDecal(vTile, GrassDecal, { 1.0f, 1.0f });
+
+				if (vWorldMap[idx] == 1)
+					tv.DrawDecal(vTile, GrassDecal, { 1.0f, 1.0f });
+			}
+	}
+	//GameStates
 	void GameGameState(float fElapsedTime) {
 		fElapsedTime = std::min(fElapsedTime, 0.16667f);
 		float PlayerSpeed = 200 * fElapsedTime;
@@ -219,24 +275,31 @@ public:
 
 		//Draw Archer
 		if (ArcherDir == true) {
-			DrawDecal({ ArcherPos }, ArcherRightDecal, { 2.0f, 2.0f });
+			DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
 		}
 		if (ArcherDir == false) {
-			DrawDecal({ ArcherPos }, ArcherLeftDecal, { 2.0f, 2.0f });
+			DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
 		}
 	}
 	void DebugGameState(float fElapsedTime) {
+		tv.SetWorldOffset(camera.GetViewPosition());
+
+		DrawBGCamera();
+
+		bool bOnScreen = camera.Update(fElapsedTime);
+
+		DrawGrass();
+
 		fElapsedTime = std::min(fElapsedTime, 0.16667f);
-		float PlayerSpeed = 400 * fElapsedTime;
+		float PlayerSpeed = 200 * fElapsedTime;
 
 		UserInput(PlayerSpeed, fElapsedTime);
-
 		//Draw Archer
 		if (ArcherDir == true) {
-			DrawDecal({ ArcherPos }, ArcherRightDecal, { 2.0f, 2.0f });
+			DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
 		}
 		if (ArcherDir == false) {
-			DrawDecal({ ArcherPos }, ArcherLeftDecal, { 2.0f, 2.0f });
+			DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
 		}
 
 		//Draw variables
@@ -268,10 +331,30 @@ public:
 private:
 	bool OnUserCreate() override {
 
+		// Construct transform view
+		tv = olc::TileTransformedView(GetScreenSize(), m_vTileSize);
+
+		// Construct Camera
+		camera = olc::utils::Camera2D(GetScreenSize() / m_vTileSize, PlayerPos);
+
+		// Configure Camera
+		camera.SetTarget(PlayerPos);
+		camera.SetMode(olc::utils::Camera2D::Mode::LazyFollow);
+		camera.SetWorldBoundary({ 0.0f, 0.0f }, m_vWorldSize);
+		camera.EnableWorldBoundary(false);
+
+		// Create "tile map" world with just two tiles
+		vWorldMap.resize(m_vWorldSize.x * m_vWorldSize.y);
+		for (int i = 0; i < vWorldMap.size(); i++)
+			vWorldMap[i] = ((rand() % 20) == 1) ? 1 : 0;
+
+		rng.seed(std::random_device()());
+
 		GameState.push_back(MENU);
 		GameState.push_back(MENU);
 
 		//Sprites
+		Grass = std::make_unique<olc::Sprite>("./Sprites/Grass.png");
 		PauseScreen = std::make_unique<olc::Sprite>("./Sprites/PauseScreen.png");
 		FullHeart = std::make_unique<olc::Sprite>("./Sprites/FullHeart.png");
 		HalfHeart = std::make_unique<olc::Sprite>("./Sprites/HalfHeart.png");
@@ -279,6 +362,7 @@ private:
 		ArcherRight = std::make_unique<olc::Sprite>("./Sprites/ArcherRight.png");
 		ArcherLeft = std::make_unique<olc::Sprite>("./Sprites/ArcherLeft.png");
 		//Decals
+		GrassDecal = new olc::Decal(Grass.get());
 		PauseScreenDecal = new olc::Decal(PauseScreen.get());
 		FullHeartDecal = new olc::Decal(FullHeart.get());
 		HalfHeartDecal = new olc::Decal(HalfHeart.get());
@@ -294,3 +378,8 @@ int main() {
 	if (demo.Construct(1024, 576, 1, 1, true, true))
 		demo.Start();
 }
+
+// To Do
+// 1. Implement a "camera" https://community.onelonecoder.com/members/javidx9/Camera/
+// 2. Implement a passive mob case (idle, wandering)
+// 3. Implement an aggressive enemies attack case (Straight at player, around the player, running away, etc)
