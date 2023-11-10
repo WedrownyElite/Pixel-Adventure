@@ -8,6 +8,11 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <random>
+
+//GameState
+enum GameStateEnum { DEBUG, GAME, PAUSED, EXIT, MENU };
+std::vector<GameStateEnum> GameState;
+
 class GUI {
 public:
 	//Sprites
@@ -91,8 +96,20 @@ public:
 
 		std::string Health = std::to_string(CharacterHealth);
 
-		pge->DrawStringDecal({ 10.0f, 90.0f }, "Health", olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 50.0f, 90.0f }, Health, olc::WHITE, { 2.0f, 2.0f });
+		pge->DrawStringDecal({ 10.0f, 120.0f }, "Health", olc::WHITE, { 2.0f, 2.0f });
+		pge->DrawStringDecal({ 130.0f, 120.0f }, Health, olc::WHITE, { 2.0f, 2.0f });
+	}
+	GameStateEnum PauseScreenInput(olc::PixelGameEngine* pge, bool resume_hovered, bool options_hovered, bool quit_hovered) {
+		if ((pge->GetMouse(0).bPressed && resume_hovered == true) || pge->GetKey(olc::Key::ESCAPE).bPressed) {
+			GameState[0] = GameState[1];
+		}
+		if (pge->GetMouse(0).bPressed && options_hovered == true) {
+
+		}
+		if (pge->GetMouse(0).bPressed && quit_hovered == true) {
+			GameState[0] = MENU;
+		}
+		return GameState[0], GameState[1];
 	}
 	void doPauseScreen(olc::PixelGameEngine* pge, int CharacterHealth, olc::vf2d PlayerPos) {
 		const olc::vf2d scale = { 1.0f, 1.0f };
@@ -118,24 +135,22 @@ public:
 		Hearts(pge, CharacterHealth);
 
 		//Draw pause opacity
-		pge->DrawDecal({ 0.0f, 0.0f }, PauseScreenDecal, { 1.0f, 1.0f });
+			pge->DrawDecal({ 0.0f, 0.0f }, PauseScreenDecal, { 1.0f, 1.0f });
 
 		pge->DrawStringDecal({ resume_XCoord, resume_YCoord }, "RESUME", olc::WHITE, scale * resume_zoom);
 		pge->DrawStringDecal({ options_XCoord, options_YCoord }, "OPTIONS", olc::WHITE, scale * options_zoom);
 		pge->DrawStringDecal({ quit_XCoord, quit_YCoord }, "QUIT", olc::WHITE, scale * quit_zoom);
 
 		//Draw variables
-		DrawDebugVariables(pge, PlayerPos, CharacterHealth);
+		if (GameState[1] == DEBUG) {
+			DrawDebugVariables(pge, PlayerPos, CharacterHealth);
+		}
 
-		//PauseScreenInputs(resume_hovered, options_hovered, quit_hovered);
+		PauseScreenInput(pge, resume_hovered, options_hovered, quit_hovered);
 	}
 };
 class Player {
 public:
-
-	//GameState
-	enum GameStateEnum { DEBUG, GAME, PAUSED, EXIT, MENU };
-	std::vector<GameStateEnum> GameState;
 
 	//Sprites
 	std::unique_ptr<olc::Sprite> ArcherRight;
@@ -147,6 +162,7 @@ public:
 
 	olc::vf2d PlayerPos{ 300.0f, 300.0f };
 	bool ArcherDir = true;
+	int CharacterHealth = 6;
 
 	void Draw(olc::TileTransformedView& tv) {
 		//Draw Archer
@@ -157,7 +173,7 @@ public:
 			tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
 		}
 	}
-	olc::vf2d Input(olc::PixelGameEngine* pge, float PlayerSpeed, int CharacterHealth) {
+	olc::vf2d Input(olc::PixelGameEngine* pge, float PlayerSpeed){
 		if ((pge->GetKey(olc::Key::LEFT).bHeld || (pge->GetKey(olc::Key::A).bHeld)) && PlayerPos.x < 965 && PlayerPos.x > -8) {
 			PlayerPos.x -= PlayerSpeed;
 			ArcherDir = false;
@@ -193,15 +209,13 @@ public:
 		}
 		return GameState[0], GameState[1];
 	}
-	int HealthTest(olc::PixelGameEngine* pge, int CharacterHealth) {
+	int HealthTest(olc::PixelGameEngine* pge) {
 		if (pge->GetMouse(0).bPressed) {
 			CharacterHealth--;
 		}
 		return CharacterHealth;
 	}
 	void Initialize(olc::PixelGameEngine* pge) {
-		GameState.push_back(MENU);
-		GameState.push_back(MENU);
 		//Sprites
 		ArcherRight = std::make_unique<olc::Sprite>("./Sprites/ArcherRight.png");
 		ArcherLeft = std::make_unique<olc::Sprite>("./Sprites/ArcherLeft.png");
@@ -216,19 +230,11 @@ public:
 
 	//Sprites
 	std::unique_ptr<olc::Sprite> Grass;
-	std::unique_ptr<olc::Sprite> PauseScreen;
 	//Decals
 	olc::Decal* GrassDecal;
-	olc::Decal* PauseScreenDecal;
-	//GameState
-	enum GameStateEnum { DEBUG, GAME, PAUSED, EXIT, MENU };
-	std::vector<GameStateEnum> GameState;
+	olc::Decal* GrassDecal;
 	//Main Menu
 	int Selection = 0;
-	//Character Variables
-	olc::vf2d PlayerPos = { 300.0f, 300.0f };
-	bool ArcherDir = true;
-	int CharacterHealth = 6;
 
 	//Camera variables
 	// Transformed view object to make world offsetting simple
@@ -240,6 +246,10 @@ public:
 	olc::utils::Camera2D camera;
 	// The world map, stored as a 1D array
 	std::vector<uint8_t> vWorldMap;
+	//Player variables
+	olc::vf2d PlayerPos = { 300, 300 };
+	bool ArcherDir = true;
+	int CharacterHealth = 6;
 
 	Player Player;
 	GUI GUI;
@@ -250,41 +260,6 @@ public:
 
 
 	//User inputs
-	void UserInput(float PlayerSpeed, float fElapsedTime) {
-		if ((GetKey(olc::Key::LEFT).bHeld || (GetKey(olc::Key::A).bHeld)) && PlayerPos.x < 965 && PlayerPos.x > -8) {
-			PlayerPos.x -= PlayerSpeed;
-			ArcherDir = false;
-		}
-		if ((GetKey(olc::Key::RIGHT).bHeld || (GetKey(olc::Key::D).bHeld)) && PlayerPos.x < 965 && PlayerPos.x > -8) {
-			PlayerPos.x += PlayerSpeed;
-			ArcherDir = true;
-		}
-		if ((GetKey(olc::Key::UP).bHeld || (GetKey(olc::Key::W).bHeld)) && PlayerPos.y < 575 && PlayerPos.y > -5) {
-			PlayerPos.y -= PlayerSpeed;
-		}
-		if ((GetKey(olc::Key::DOWN).bHeld || (GetKey(olc::Key::S).bHeld)) && PlayerPos.y < 575 && PlayerPos.y > -5) {
-			PlayerPos.y += PlayerSpeed;
-		}
-		if (PlayerPos.x > 965) {
-			PlayerPos.x = 964;
-		}
-		if (PlayerPos.x < -8) {
-			PlayerPos.x = -7;
-		}
-		if (PlayerPos.y > 512) {
-			PlayerPos.y = 511;
-		}
-		if (PlayerPos.y < -5) {
-			PlayerPos.y = -4;
-		}
-		if (GetKey(olc::Key::ESCAPE).bPressed) {
-			GameState[1] = GameState[0];
-			GameState[0] = PAUSED;
-		}
-		if (GetMouse(0).bPressed) {
-			CharacterHealth--;
-		}
-	}
 	void PauseScreenInputs(bool resume_hovered, bool options_hovered, bool quit_hovered) {
 		if (GetMouse(0).bPressed && resume_hovered == true) {
 			GameState[0] = GameState[1];
@@ -297,49 +272,6 @@ public:
 		}
 	}
 	//UI
-	void DrawGrass() {
-		for (int x = 0; x < 1024; x += 32) {
-			for (int y = 0; y < 576; y += 32) {
-				DrawDecal({ (float)x, (float)y }, GrassDecal);
-			}
-		}
-	}
-	void doPauseScreen() {
-
-		const olc::vf2d scale = { 1.0f, 1.0f };
-		//Resume variables
-		const bool resume_hovered = (GetMouseX() >= 400 && GetMouseY() >= 158 && GetMouseX() <= 634 && GetMouseY() <= 194);
-		const float resume_zoom = resume_hovered ? 5.5f : 5.0f;
-		const float resume_XCoord = resume_hovered ? 411.0f : 420.0f;
-		const float resume_YCoord = resume_hovered ? 168.0f : 170.0f;
-		//Options variables
-		const  bool options_hovered = (GetMouseX() >= 400 && GetMouseY() >= 250 && GetMouseX() <= 675 && GetMouseY() <= 285);
-		const float options_zoom = options_hovered ? 5.5f : 5.0f;
-		const float options_XCoord = options_hovered ? 388.0f : 400.0f;
-		const float options_YCoord = options_hovered ? 258.0f : 260.0f;
-		//Quit variables
-		const bool quit_hovered = (GetMouseX() >= 460 && GetMouseY() >= 350 && GetMouseX() <= 620 && GetMouseY() <= 385);
-		const float quit_zoom = quit_hovered ? 5.5 : 5.0f;
-		const float quit_XCoord = quit_hovered ? 453.0f : 460.0f;
-		const float quit_YCoord = quit_hovered ? 348.0f : 350.0f;
-
-		//Draw background (W.I.P)
-
-		//Draw hearts
-		//DrawCharacterHealth();
-
-		//Draw pause opacity
-		DrawDecal({ 0.0f, 0.0f }, PauseScreenDecal, { 1.0f, 1.0f });
-
-		DrawStringDecal({ resume_XCoord, resume_YCoord }, "RESUME", olc::WHITE, scale * resume_zoom);
-		DrawStringDecal({ options_XCoord, options_YCoord }, "OPTIONS", olc::WHITE, scale * options_zoom);
-		DrawStringDecal({ quit_XCoord, quit_YCoord }, "QUIT", olc::WHITE, scale * quit_zoom);
-
-		//Draw variables
-		DrawDebugVariables();
-
-		PauseScreenInputs(resume_hovered, options_hovered, quit_hovered);
-	}
 	void MainMenu() {
 		if (Selection == 0) {
 			DrawStringDecal({ (float)ScreenWidth() / 2, (float)ScreenHeight() / 2 }, ">> Play", olc::WHITE, { 5.0, 5.0f });
@@ -373,25 +305,6 @@ public:
 			GameState[0] = EXIT;
 		}
 	}
-	void DrawDebugVariables() {
-		//PlayerPos
-		std::string ArcherX = std::to_string(PlayerPos.x);
-		std::string ArcherY = std::to_string(PlayerPos.y);
-
-		DrawStringDecal({ 10.0f, 10.0f }, "ArcherX", olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 140.0f, 10.0f }, ArcherX, olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 10.0f, 30.0f }, "ArcherY", olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 140.0f, 30.0f }, ArcherY, olc::WHITE, { 2.0f, 2.0f });
-
-		//MousePos
-		std::string MouseX = std::to_string(GetMouseX());
-		std::string MouseY = std::to_string(GetMouseY());
-
-		DrawStringDecal({ 10.0f, 60.0f }, "MouseX", olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 140.0f, 60.0f }, MouseX, olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 10.0f, 80.0f }, "MouseY", olc::WHITE, { 2.0f, 2.0f });
-		DrawStringDecal({ 140.0f, 80.0f }, MouseY, olc::WHITE, { 2.0f, 2.0f });
-	}
 	void DrawBGCamera() {
 		// Render "tile map", by getting visible tiles
 		olc::vi2d vTileTL = tv.GetTopLeftTile().max({ 0,0 });
@@ -412,18 +325,25 @@ public:
 	}
 	//GameStates
 	void GameGameState(float fElapsedTime) {
+		//Speed
 		fElapsedTime = std::min(fElapsedTime, 0.16667f);
-		float PlayerSpeed = 200 * fElapsedTime;
+		float PlayerSpeed = 8 * fElapsedTime;
 
-		UserInput(PlayerSpeed, fElapsedTime);
+		//Camera variables
+		bool bOnScreen = camera.Update(fElapsedTime);
+		tv.SetWorldOffset(camera.GetViewPosition());
+
+		PlayerPos = Player.Input(this, PlayerSpeed);
+		CharacterHealth = Player.HealthTest(this);
+		Player.EscapeInput(this);
+
+		DrawBGCamera();
 
 		//Draw Archer
-		//if (ArcherDir == true) {
-			//tv.DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
-		//}
-		//if (ArcherDir == false) {
-			//tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
-		//}
+		Player.Draw(tv);
+
+		//Draw Hearts
+		GUI.Hearts(this, CharacterHealth);
 	}
 	void DebugGameState(float fElapsedTime) {
 		//Speed
@@ -434,9 +354,9 @@ public:
 		bool bOnScreen = camera.Update(fElapsedTime);
 		tv.SetWorldOffset(camera.GetViewPosition());
 
-		PlayerPos = Player.Input(this, PlayerSpeed, CharacterHealth);
-		CharacterHealth = Player.HealthTest(this, CharacterHealth);
-		GameState[0] = Player.EscapeInput(this);
+		PlayerPos = Player.Input(this, PlayerSpeed);
+		CharacterHealth = Player.HealthTest(this);
+		Player.EscapeInput(this);
 
 		DrawBGCamera();
 
@@ -471,6 +391,10 @@ public:
 	}
 private:
 	bool OnUserCreate() override {
+
+		GameState.push_back(MENU);
+		GameState.push_back(MENU);
+
 		//Initialize player sprites/decals
 		Player.Initialize(this);
 		//Initialize GUI sprites/decals
@@ -498,10 +422,8 @@ private:
 
 		//Sprites
 		Grass = std::make_unique<olc::Sprite>("./Sprites/Grass.png");
-		PauseScreen = std::make_unique<olc::Sprite>("./Sprites/PauseScreen.png");
 		//Decals
 		GrassDecal = new olc::Decal(Grass.get());
-		PauseScreenDecal = new olc::Decal(PauseScreen.get());
 		return true;
 	}
 };
