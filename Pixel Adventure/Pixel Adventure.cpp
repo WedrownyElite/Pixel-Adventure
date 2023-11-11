@@ -156,6 +156,8 @@ public:
 };
 class Player {
 public:
+	// Transformed view object to make world offsetting simple
+	olc::TileTransformedView tv;
 
 	//Sprites
 	std::unique_ptr<olc::Sprite> ArcherRight;
@@ -166,9 +168,26 @@ public:
 	olc::Decal* ArcherLeftDecal;
 
 	olc::vf2d PlayerPos{ 300.0f, 300.0f };
+	olc::vf2d MousePos;
 	bool ArcherDir = true;
 	int CharacterHealth = 6;
 
+	float angleDifference(float angle_1, float angle_2)
+	{
+		angle_1 = fmod(angle_1, 2 * 3.14159f);
+		angle_2 = fmod(angle_2, 2 * 3.14159f);
+		float angle_diff = angle_1 - angle_2;
+
+		if (angle_diff > 3.14159f)
+			angle_diff -= 2 * 3.14159f;
+		else if (angle_diff < -3.14159f)
+			angle_diff += 2 * 3.14159f;
+
+		return -angle_diff;
+	}
+	olc::vf2d GetWorldMousePos(olc::PixelGameEngine* pge) {
+		return pge->GetMousePos() / 32 + tv.GetWorldOffset();
+	}
 	void Draw(olc::TileTransformedView& tv) {
 		//Draw Archer
 		if (ArcherDir == true) {
@@ -176,6 +195,28 @@ public:
 		}
 		if (ArcherDir == false) {
 			tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
+		}
+	}
+	float PointTo(olc::vf2d pos1, olc::vf2d pos2) {
+		return atan2(pos2.y - pos1.y, pos2.x - pos1.x);
+	}
+	void Attack(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d GoopPos) {
+		MousePos = { GetWorldMousePos(pge) };
+		olc::vf2d PlayerDir = (-(PlayerPos - MousePos).norm());
+		float angleTowards = PointTo(PlayerPos, GoopPos); //Calculate the angle towards a target.
+		float angleDiff = angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
+		float maxDistance = 3; //How far away the object can be to still be in range.
+		float maxAngle = M_PI / 4; //The total sweeping angle of the arch in either direction (PI/4 is 45 degrees in either direction, 90 degrees total).
+
+		if (
+			sqrt(pow(PlayerPos.x - GoopPos.x, 2) + pow(PlayerPos.y - GoopPos.y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
+			&& abs(angleDiff) < maxAngle  //See if the target's angle is within the sweeping arc range.
+			&& pge->GetMouse(0).bHeld) {
+			//Target is in range.
+			tv.FillRectDecal({ GoopPos }, { 2.0f, 2.0f }, olc::RED);
+		}
+		else {
+			tv.FillRectDecal({ GoopPos }, { 2.0f, 2.0f }, olc::GREEN);//Target is out of range.
 		}
 	}
 	olc::vf2d Input(olc::PixelGameEngine* pge, float PlayerSpeed){
@@ -254,7 +295,6 @@ public:
 	olc::vf2d PlayerPos = { 300, 300 };
 	bool ArcherDir = true;
 	int CharacterHealth = 6;
-	olc::vf2d MousePos;
 	//Arch variables
 	float radius = 8.0f; // Radius of the arch (half of the desired length)
 
@@ -267,25 +307,6 @@ public:
 
 	Pixel_Adventure() {
 		sAppName = "Pixel Adventure";
-	}
-	olc::vf2d GetWorldMousePos() {
-		return GetMousePos() + tv.GetWorldOffset();
-	}
-	float PointTo(olc::vf2d pos1, olc::vf2d pos2) {
-		return atan2(pos2.y - pos1.y, pos2.x - pos1.x);
-	}
-	float angleDifference(float angle_1, float angle_2)
-	{
-		angle_1 = fmod(angle_1, 2 * 3.14159f);
-		angle_2 = fmod(angle_2, 2 * 3.14159f);
-		float angle_diff = angle_1 - angle_2;
-
-		if (angle_diff > 3.14159f)
-			angle_diff -= 2 * 3.14159f;
-		else if (angle_diff < -3.14159f)
-			angle_diff += 2 * 3.14159f;
-
-		return -angle_diff;
 	}
 	void DrawPlayerArch() {
 		// Get the mouse cursor position
@@ -413,26 +434,7 @@ public:
 		//Draw Archer
 		Player.Draw(tv);
 
-		if (GetMouse(0).bPressed) {
-			//DrawPlayerArch();
-		}
-		MousePos = { GetWorldMousePos() };
-		olc::vf2d PlayerDir = (PlayerPos - MousePos).norm();
-		float angleTowards = PointTo(PlayerPos, GoopPos); //Calculate the angle towards a target.
-		float angleDiff = angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
-		float maxDistance = 24; //How far away the object can be to still be in range.
-		float maxAngle = M_PI / 4; //The total sweeping angle of the arch in either direction (PI/4 is 45 degrees in either direction, 90 degrees total).
-
-		if (
-			sqrt(pow(PlayerPos.x - GoopPos.x, 2) + pow(PlayerPos.y - GoopPos.y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
-			&& abs(angleDiff) < maxAngle  //See if the target's angle is within the sweeping arc range.
-			&& GetMouse(0).bHeld) {
-			//Target is in range.
-			tv.FillRectDecal({ GoopPos }, { 2.0f, 2.0f }, olc::RED);
-		}
-		else {
-			tv.FillRectDecal({ GoopPos }, { 2.0f, 2.0f }, olc::GREEN);//Target is out of range.
-		}
+		Player.Attack(tv, this, GoopPos);
 
 		//Draw variables
 		GUI.DrawDebugVariables(this, PlayerPos, CharacterHealth);
