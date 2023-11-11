@@ -8,6 +8,11 @@
 #define _USE_MATH_DEFINES
 #include <cmath>
 #include <random>
+#include <algorithm>
+
+#ifndef M_PI
+#define M_PI 3.14159265358979323846264338327950288
+#endif
 
 //GameState
 enum GameStateEnum { DEBUG, GAME, PAUSED, EXIT, MENU };
@@ -232,7 +237,6 @@ public:
 	std::unique_ptr<olc::Sprite> Grass;
 	//Decals
 	olc::Decal* GrassDecal;
-	olc::Decal* GrassDecal;
 	//Main Menu
 	int Selection = 0;
 
@@ -250,6 +254,12 @@ public:
 	olc::vf2d PlayerPos = { 300, 300 };
 	bool ArcherDir = true;
 	int CharacterHealth = 6;
+	//Arch variables
+	float radius = 8.0f; // Radius of the arch (half of the desired length)
+
+	olc::vf2d GoopPos = { 280.0f, 280.0f }; // Position of the Goop
+	olc::vf2d GoopSize = { 16.0f, 16.0f }; // Size of the Goop
+	bool ArchDrawn = false;
 
 	Player Player;
 	GUI GUI;
@@ -257,8 +267,57 @@ public:
 	Pixel_Adventure() {
 		sAppName = "Pixel Adventure";
 	}
+	bool IsPixelInsideArch(const olc::vf2d& pixel)
+	{
+		// Calculate the distance between the pixel and the center of the arch (origin)
+		float distance = (pixel - PlayerPos).mag();
 
+		// Check if the distance is less than or equal to the radius of the arch
+		return distance <= radius;
+	}
+	bool IsGoopInsideArch()
+	{
+		if (ArchDrawn == true) {
+			// Iterate through all pixels within the Goop rectangle
+			for (int y = static_cast<int>(GoopPos.y - 0.5f * GoopSize.y); y < static_cast<int>(GoopPos.y + 0.5f * GoopSize.y); ++y)
+			{
+				for (int x = static_cast<int>(GoopPos.x - 0.5f * GoopSize.x); x < static_cast<int>(GoopPos.x + 0.5f * GoopSize.x); ++x)
+				{
+					// Check if the pixel is inside the arch
+					if (IsPixelInsideArch({ static_cast<float>(x), static_cast<float>(y) }))
+					{
+						return true; // At least one pixel is inside the arch
+					}
+				}
+			}
+		}
 
+		return false; // No pixel in the Goop rectangle is inside the arch
+
+	}
+
+	void DrawPlayerArch() {
+		// Get the mouse cursor position
+		int mouseX = GetMouseX();
+		int mouseY = GetMouseY();
+
+		// Calculate the direction vector from the origin to the cursor position
+		olc::vf2d dir = { static_cast<float>(mouseX) - PlayerPos.x, static_cast<float>(mouseY) - PlayerPos.y };
+
+		// Calculate the angle between the cursor vector and the right vector (1, 0)
+		float angle = atan2(dir.y, dir.x);
+
+		// Draw the arch as two lines forming a 30-degree angle
+		float halfAngle = 30.0f * (static_cast<float>(M_PI) / 180.0f); // 30 degrees in radians
+		olc::vf2d p1 = PlayerPos + radius * olc::vf2d(cos(angle - halfAngle), sin(angle - halfAngle));
+		olc::vf2d p2 = PlayerPos + radius * olc::vf2d(cos(angle + halfAngle), sin(angle + halfAngle));
+
+		// Draw the lines forming the arch
+		tv.DrawLineDecal({ PlayerPos.x, PlayerPos.y }, { p1.x, p1.y }, olc::WHITE);
+		tv.DrawLineDecal({ PlayerPos.x, PlayerPos.y }, { p2.x, p2.y }, olc::WHITE);
+
+		ArchDrawn = true;
+	}
 	//User inputs
 	void PauseScreenInputs(bool resume_hovered, bool options_hovered, bool quit_hovered) {
 		if (GetMouse(0).bPressed && resume_hovered == true) {
@@ -346,6 +405,7 @@ public:
 		GUI.Hearts(this, CharacterHealth);
 	}
 	void DebugGameState(float fElapsedTime) {
+		ArchDrawn = false;
 		//Speed
 		fElapsedTime = std::min(fElapsedTime, 0.16667f);
 		float PlayerSpeed = 8 * fElapsedTime;
@@ -355,13 +415,26 @@ public:
 		tv.SetWorldOffset(camera.GetViewPosition());
 
 		PlayerPos = Player.Input(this, PlayerSpeed);
-		CharacterHealth = Player.HealthTest(this);
+		//CharacterHealth = Player.HealthTest(this);
 		Player.EscapeInput(this);
 
 		DrawBGCamera();
 
 		//Draw Archer
 		Player.Draw(tv);
+
+		if (GetMouse(0).bPressed) {
+			DrawPlayerArch();
+		}
+		// Check if any pixel within the Goop rectangle is inside the arch
+		bool isGoopInside = IsGoopInsideArch();
+
+		// Draw Goop at its position with different colors based on whether it's inside the arch
+		if (isGoopInside)
+			tv.FillRectDecal(GoopPos - 0.5f * olc::vf2d(GoopSize.x, GoopSize.y), GoopSize, olc::GREEN);
+		else
+			tv.FillRectDecal(GoopPos - 0.5f * olc::vf2d(GoopSize.x, GoopSize.y), GoopSize, olc::RED);
+			
 
 		//Draw variables
 		GUI.DrawDebugVariables(this, PlayerPos, CharacterHealth);
@@ -419,6 +492,8 @@ private:
 
 		GameState.push_back(MENU);
 		GameState.push_back(MENU);
+
+		
 
 		//Sprites
 		Grass = std::make_unique<olc::Sprite>("./Sprites/Grass.png");
