@@ -254,6 +254,7 @@ public:
 	olc::vf2d PlayerPos = { 300, 300 };
 	bool ArcherDir = true;
 	int CharacterHealth = 6;
+	olc::vf2d MousePos;
 	//Arch variables
 	float radius = 8.0f; // Radius of the arch (half of the desired length)
 
@@ -267,35 +268,25 @@ public:
 	Pixel_Adventure() {
 		sAppName = "Pixel Adventure";
 	}
-	bool IsPixelInsideArch(const olc::vf2d& pixel)
-	{
-		// Calculate the distance between the pixel and the center of the arch (origin)
-		float distance = (pixel - PlayerPos).mag();
-
-		// Check if the distance is less than or equal to the radius of the arch
-		return distance <= radius;
+	olc::vf2d GetWorldMousePos() {
+		return GetMousePos() + tv.GetWorldOffset();
 	}
-	bool IsGoopInsideArch()
-	{
-		if (ArchDrawn == true) {
-			// Iterate through all pixels within the Goop rectangle
-			for (int y = static_cast<int>(GoopPos.y - 0.5f * GoopSize.y); y < static_cast<int>(GoopPos.y + 0.5f * GoopSize.y); ++y)
-			{
-				for (int x = static_cast<int>(GoopPos.x - 0.5f * GoopSize.x); x < static_cast<int>(GoopPos.x + 0.5f * GoopSize.x); ++x)
-				{
-					// Check if the pixel is inside the arch
-					if (IsPixelInsideArch({ static_cast<float>(x), static_cast<float>(y) }))
-					{
-						return true; // At least one pixel is inside the arch
-					}
-				}
-			}
-		}
-
-		return false; // No pixel in the Goop rectangle is inside the arch
-
+	float PointTo(olc::vf2d pos1, olc::vf2d pos2) {
+		return atan2(pos2.y - pos1.y, pos2.x - pos1.x);
 	}
+	float angleDifference(float angle_1, float angle_2)
+	{
+		angle_1 = fmod(angle_1, 2 * 3.14159f);
+		angle_2 = fmod(angle_2, 2 * 3.14159f);
+		float angle_diff = angle_1 - angle_2;
 
+		if (angle_diff > 3.14159f)
+			angle_diff -= 2 * 3.14159f;
+		else if (angle_diff < -3.14159f)
+			angle_diff += 2 * 3.14159f;
+
+		return -angle_diff;
+	}
 	void DrawPlayerArch() {
 		// Get the mouse cursor position
 		int mouseX = GetMouseX();
@@ -405,7 +396,6 @@ public:
 		GUI.Hearts(this, CharacterHealth);
 	}
 	void DebugGameState(float fElapsedTime) {
-		ArchDrawn = false;
 		//Speed
 		fElapsedTime = std::min(fElapsedTime, 0.16667f);
 		float PlayerSpeed = 8 * fElapsedTime;
@@ -424,17 +414,25 @@ public:
 		Player.Draw(tv);
 
 		if (GetMouse(0).bPressed) {
-			DrawPlayerArch();
+			//DrawPlayerArch();
 		}
-		// Check if any pixel within the Goop rectangle is inside the arch
-		bool isGoopInside = IsGoopInsideArch();
+		MousePos = { GetWorldMousePos() };
+		olc::vf2d PlayerDir = (PlayerPos - MousePos).norm();
+		float angleTowards = PointTo(PlayerPos, GoopPos); //Calculate the angle towards a target.
+		float angleDiff = angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
+		float maxDistance = 24; //How far away the object can be to still be in range.
+		float maxAngle = M_PI / 4; //The total sweeping angle of the arch in either direction (PI/4 is 45 degrees in either direction, 90 degrees total).
 
-		// Draw Goop at its position with different colors based on whether it's inside the arch
-		if (isGoopInside)
-			tv.FillRectDecal(GoopPos - 0.5f * olc::vf2d(GoopSize.x, GoopSize.y), GoopSize, olc::GREEN);
-		else
-			tv.FillRectDecal(GoopPos - 0.5f * olc::vf2d(GoopSize.x, GoopSize.y), GoopSize, olc::RED);
-			
+		if (
+			sqrt(pow(PlayerPos.x - GoopPos.x, 2) + pow(PlayerPos.y - GoopPos.y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
+			&& abs(angleDiff) < maxAngle  //See if the target's angle is within the sweeping arc range.
+			&& GetMouse(0).bHeld) {
+			//Target is in range.
+			tv.FillRectDecal({ GoopPos }, { 2.0f, 2.0f }, olc::RED);
+		}
+		else {
+			tv.FillRectDecal({ GoopPos }, { 2.0f, 2.0f }, olc::GREEN);//Target is out of range.
+		}
 
 		//Draw variables
 		GUI.DrawDebugVariables(this, PlayerPos, CharacterHealth);
