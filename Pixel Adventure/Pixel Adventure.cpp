@@ -156,8 +156,6 @@ public:
 };
 class Player {
 public:
-	// Transformed view object to make world offsetting simple
-	olc::TileTransformedView tv;
 
 	//Sprites
 	std::unique_ptr<olc::Sprite> ArcherRight;
@@ -171,6 +169,7 @@ public:
 	olc::vf2d MousePos;
 	bool ArcherDir = true;
 	int CharacterHealth = 6;
+	float PlayerSpeed;
 
 	float angleDifference(float angle_1, float angle_2)
 	{
@@ -185,7 +184,7 @@ public:
 
 		return -angle_diff;
 	}
-	olc::vf2d GetWorldMousePos(olc::PixelGameEngine* pge) {
+	olc::vf2d GetWorldMousePos(olc::TileTransformedView& tv, olc::PixelGameEngine* pge) {
 		return pge->GetMousePos() / 32 + tv.GetWorldOffset();
 	}
 	void Draw(olc::TileTransformedView& tv) {
@@ -201,7 +200,7 @@ public:
 		return atan2(pos2.y - pos1.y, pos2.x - pos1.x);
 	}
 	void Attack(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d GoopPos) {
-		MousePos = { GetWorldMousePos(pge) };
+		MousePos = { GetWorldMousePos(tv, pge) };
 		olc::vf2d PlayerDir = (-(PlayerPos - MousePos).norm());
 		float angleTowards = PointTo(PlayerPos, GoopPos); //Calculate the angle towards a target.
 		float angleDiff = angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
@@ -219,21 +218,24 @@ public:
 			tv.FillRectDecal({ GoopPos }, { 2.0f, 2.0f }, olc::GREEN);//Target is out of range.
 		}
 	}
-	olc::vf2d Input(olc::PixelGameEngine* pge, float PlayerSpeed){
-		if ((pge->GetKey(olc::Key::LEFT).bHeld || (pge->GetKey(olc::Key::A).bHeld)) && PlayerPos.x < 965 && PlayerPos.x > -8) {
+	olc::vf2d Input(olc::PixelGameEngine* pge, float fElapsedTime){
+		PlayerSpeed = 8.0f * fElapsedTime;
+		// Handle input and move the player
+		if (pge->GetKey(olc::Key::LEFT).bHeld || (pge->GetKey(olc::Key::A).bHeld)) {
 			PlayerPos.x -= PlayerSpeed;
 			ArcherDir = false;
 		}
-		if ((pge->GetKey(olc::Key::RIGHT).bHeld || (pge->GetKey(olc::Key::D).bHeld)) && PlayerPos.x < 965 && PlayerPos.x > -8) {
+		if (pge->GetKey(olc::Key::RIGHT).bHeld || (pge->GetKey(olc::Key::D).bHeld)) {
 			PlayerPos.x += PlayerSpeed;
 			ArcherDir = true;
 		}
-		if ((pge->GetKey(olc::Key::UP).bHeld || (pge->GetKey(olc::Key::W).bHeld)) && PlayerPos.y < 575 && PlayerPos.y > -5) {
+		if (pge->GetKey(olc::Key::UP).bHeld || (pge->GetKey(olc::Key::W).bHeld)) {
 			PlayerPos.y -= PlayerSpeed;
 		}
-		if ((pge->GetKey(olc::Key::DOWN).bHeld || (pge->GetKey(olc::Key::S).bHeld)) && PlayerPos.y < 575 && PlayerPos.y > -5) {
+		if (pge->GetKey(olc::Key::DOWN).bHeld || (pge->GetKey(olc::Key::S).bHeld)) {
 			PlayerPos.y += PlayerSpeed;
 		}
+
 		if (PlayerPos.x > 965) {
 			PlayerPos.x = 964;
 		}
@@ -398,13 +400,12 @@ public:
 	void GameGameState(float fElapsedTime) {
 		//Speed
 		fElapsedTime = std::min(fElapsedTime, 0.16667f);
-		float PlayerSpeed = 8 * fElapsedTime;
 
 		//Camera variables
 		bool bOnScreen = camera.Update(fElapsedTime);
 		tv.SetWorldOffset(camera.GetViewPosition());
 
-		PlayerPos = Player.Input(this, PlayerSpeed);
+		PlayerPos = Player.Input(this, fElapsedTime);
 		CharacterHealth = Player.HealthTest(this);
 		Player.EscapeInput(this);
 
@@ -425,7 +426,7 @@ public:
 		bool bOnScreen = camera.Update(fElapsedTime);
 		tv.SetWorldOffset(camera.GetViewPosition());
 
-		PlayerPos = Player.Input(this, PlayerSpeed);
+		PlayerPos = Player.Input(this, fElapsedTime);
 		//CharacterHealth = Player.HealthTest(this);
 		Player.EscapeInput(this);
 
