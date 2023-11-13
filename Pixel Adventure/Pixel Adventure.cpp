@@ -58,6 +58,8 @@ public:
 
 	olc::vf2d PlayerPos{ 300.0f, 300.0f };
 	olc::vf2d MousePos;
+	float AttackCooldown = 0.0f;
+	bool PlayerCanAttack = true;
 	bool ArcherDir = true;
 	int CharacterHealth = 6;
 	float PlayerSpeed;
@@ -105,15 +107,30 @@ public:
 		}
 		return PlayerPos;
 	}
+	bool AttackInput(olc::PixelGameEngine* pge, float fElapsedTime) {
+		if (pge->GetMouse(0).bPressed && PlayerCanAttack == true) {
+			PlayerCanAttack = false;
+		}
+		if (PlayerCanAttack == false) {
+			if (AttackCooldown < 0.5f) {
+				AttackCooldown += fElapsedTime;
+			}
+			if (AttackCooldown >= 0.5f) {
+				PlayerCanAttack = true;
+				AttackCooldown = 0.0f;
+			}
+		}
+		return PlayerCanAttack;
+	}
 	GameStateEnum EscapeInput(olc::PixelGameEngine* pge) {
 		if (pge->GetKey(olc::Key::ESCAPE).bPressed) {
 			GameState[1] = GameState[0];
 			GameState[0] = PAUSED;
 		}
-		return GameState[0], GameState[1];
+		return GameState[1], GameState[0];
 	}
 	int HealthTest(olc::PixelGameEngine* pge) {
-		if (pge->GetMouse(0).bPressed) {
+		if (pge->GetKey(olc::Key::O).bPressed) {
 			CharacterHealth--;
 		}
 		return CharacterHealth;
@@ -271,6 +288,8 @@ public:
 	//Skele variables
 	std::vector<olc::vf2d> SkelePos;
 	olc::vf2d SkeleSize{ 1.1f, 1.7f };
+	std::vector<int> SkeleHit;
+	std::vector<olc::vf2d> SkeleTarget;
 	//Player
 	olc::vf2d PlayerSize{ 1.1f, 1.7f };
 
@@ -287,7 +306,11 @@ public:
 	olc::Decal* ShadowDecal;
 	void Spawn() {
 		if (SkelePos.size() < 1) {
-			SkelePos.push_back({ 305, 305 });
+			for (int k = 0; k < 1; k++) {
+				SkelePos.push_back({ 305, 305 });
+				SkeleHit.push_back(0);
+				SkeleTarget.push_back({ SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f });
+			}
 		}
 	}
 	olc::vf2d ReturnClosestPos(olc::vf2d PlayerPos) {
@@ -306,7 +329,7 @@ public:
 		}
 		return ClosestSkelePos;
 	}
-	void Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float PlayerSpeed) {
+	void Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float PlayerSpeed, bool PlayerCanAttack) {
 		Spawn();
 		for (int k = 0; k < SkelePos.size(); k++) {
 			olc::vi2d Skele(SkelePos[k].x + 0.5, SkelePos[k].y + 0.1f);
@@ -332,7 +355,13 @@ public:
 			if (
 				sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
 				&& abs(angleDiff) < maxAngle  //See if the target's angle is within the sweeping arc range.
-				&& pge->GetMouse(0).bHeld) {
+				&& pge->GetMouse(0).bPressed
+				&& PlayerCanAttack == true) {
+				//Hit
+				SkeleHit[k] = 1;
+				SkeleTarget[k] = { SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f };
+				SkeleTarget.push_back({ SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f });
+				SkeleTarget[k] = { SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f };
 				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 2.0f, 2.0f });
 				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, {2.3f, 2.3f});
 				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
@@ -340,6 +369,25 @@ public:
 			else {
 				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 1.8f, 1.8f });
 				tv.DrawDecal({ SkelePos[k] }, SkeleRightDecal, { 2.0f, 2.0f });
+			}
+		}
+	}
+	void SkeleTest(olc::PixelGameEngine* pge, float fElapsedTime) {
+		float SkeleSpeed = 8.0f * fElapsedTime;
+		
+		for (int k = 0; k < SkelePos.size(); k++) {
+			if (pge->GetKey(olc::Key::I).bPressed) {
+				SkelePos[k].y += 0.5f;
+				SkelePos[k].x += 1.0f;
+			}
+			if (pge->GetKey(olc::Key::K).bPressed) {
+				SkelePos[k].y += 0.01f;
+			}
+			if (pge->GetKey(olc::Key::L).bPressed) {
+				SkelePos[k].x += 0.01f;
+			}
+			if (pge->GetKey(olc::Key::J).bPressed) {
+				SkelePos[k].x -= 0.01f;
 			}
 		}
 	}
@@ -492,13 +540,16 @@ public:
 
 		DrawBGCamera();
 
+		Skeleton.SkeleTest(this, fElapsedTime);
 		//Get ClosestSkelePos
 		olc::vf2d ClosestSkelePos = Skeleton.ReturnClosestPos(PlayerPos);
+
+		bool PlayerCanAttack = Player.AttackInput(this, fElapsedTime);
 
 		//If Closest Skeleton is above player
 		if (ClosestSkelePos.y <= PlayerPos.y) {
 			//Enemies
-			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed);
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack);
 
 			//Draw Archer
 			Player.Draw(tv);
@@ -510,8 +561,11 @@ public:
 			Player.Draw(tv);
 
 			//Enemies
-			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed);
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack);
 		}
+
+		//HealthTest
+		Player.HealthTest(this);
 
 		//Draw variables
 		GUI.DrawDebugVariables(tv, this, PlayerPos, CharacterHealth);
@@ -589,6 +643,7 @@ int main() {
 }
 
 // To Do
-// 1. Implement a "camera" https://community.onelonecoder.com/members/javidx9/Camera/
-// 2. Implement a passive mob case (idle, wandering)
-// 3. Implement an aggressive enemies attack case (Straight at player, around the player, running away, etc)
+//\ 1. Implement a "camera" https://community.onelonecoder.com/members/javidx9/Camera/
+// 2. Implement knockback when Skeleton is hit
+// 3. Implement a passive mob case (idle, wandering)
+// 4. Implement an aggressive enemies attack case (Straight at player, around the player, running away, etc)
