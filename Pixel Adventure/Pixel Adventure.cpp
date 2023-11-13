@@ -290,6 +290,10 @@ public:
 	olc::vf2d SkeleSize{ 1.1f, 1.7f };
 	std::vector<int> SkeleHit;
 	std::vector<olc::vf2d> SkeleTarget;
+	std::vector<int> SkeleRedTimer;
+	std::vector<olc::vf2d> DirOfHit;
+	std::vector<olc::vf2d> DistTraveled;
+	std::vector<float> JumpDistTraveled;
 	//Player
 	olc::vf2d PlayerSize{ 1.1f, 1.7f };
 
@@ -310,6 +314,10 @@ public:
 				SkelePos.push_back({ 305, 305 });
 				SkeleHit.push_back(0);
 				SkeleTarget.push_back({ SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f });
+				SkeleRedTimer.push_back(0);
+				DirOfHit.push_back({ 0.0f, 0.0f });
+				DistTraveled.push_back({ 0.0f, 0.0f });
+				JumpDistTraveled.push_back(0.0f);
 			}
 		}
 	}
@@ -329,7 +337,35 @@ public:
 		}
 		return ClosestSkelePos;
 	}
-	void Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float PlayerSpeed, bool PlayerCanAttack) {
+	void SkeletonKnockback(float fElapsedTime) {
+		float KnockbackSpeed = 12 * fElapsedTime;
+		float JumpSpeed = 8 * fElapsedTime;
+		for (int k = 0; k < SkelePos.size(); k++) {
+			if (SkeleHit[k] == 1) {
+				if ((DistTraveled[k].x <= -1.5f || DistTraveled[k].y <= -1.5f) && JumpDistTraveled[k] >= 2.0f) {
+					SkeleHit[k] = 0;
+					DistTraveled[k] = { 0.0f, 0.0f };
+					JumpDistTraveled[k] = 0.0f;
+				}
+				else {
+					SkelePos[k] -= DirOfHit[k] * KnockbackSpeed;
+					DistTraveled[k] += DirOfHit[k] * KnockbackSpeed;
+					if (JumpDistTraveled[k] < 1.0f) {
+						SkelePos[k].x -= JumpSpeed;
+						JumpDistTraveled[k] += JumpSpeed;
+					}
+					else if (JumpDistTraveled[k] >= 1.0f && JumpDistTraveled[k] < 2.0f) {
+						SkelePos[k].x += JumpSpeed;
+						JumpDistTraveled[k] += JumpSpeed;
+					}
+					else if (JumpDistTraveled[k] >= 2.0f) {
+
+					}
+				}
+			}
+		}
+	}
+	void Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float PlayerSpeed, bool PlayerCanAttack, float fElapsedTime) {
 		Spawn();
 		for (int k = 0; k < SkelePos.size(); k++) {
 			olc::vi2d Skele(SkelePos[k].x + 0.5, SkelePos[k].y + 0.1f);
@@ -355,9 +391,11 @@ public:
 			if (
 				sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
 				&& abs(angleDiff) < maxAngle  //See if the target's angle is within the sweeping arc range.
-				&& pge->GetMouse(0).bPressed
-				&& PlayerCanAttack == true) {
+				&& pge->GetMouse(0).bPressed) {
+				//&& PlayerCanAttack == true) {
 				//Hit
+				DirOfHit[k] = (PlayerPos - SkelePos[k]).norm();
+				SkeleRedTimer[k] = 1;
 				SkeleHit[k] = 1;
 				SkeleTarget[k] = { SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f };
 				SkeleTarget.push_back({ SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f });
@@ -366,10 +404,25 @@ public:
 				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, {2.3f, 2.3f});
 				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
 			}
-			else {
+			//If not hit, draw normal skeleton
+			else if (SkeleRedTimer[k] == 0) {
 				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 1.8f, 1.8f });
 				tv.DrawDecal({ SkelePos[k] }, SkeleRightDecal, { 2.0f, 2.0f });
 			}
+			//Draw hurt skeleton for 10 frames
+			if (SkeleRedTimer[k] > 0) {
+				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 2.0f, 2.0f });
+				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, { 2.3f, 2.3f });
+				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+				SkeleRedTimer[k]++;
+				if (SkeleRedTimer[k] == 10) {
+					tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 2.0f, 2.0f });
+					tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, { 2.3f, 2.3f });
+					tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+					SkeleRedTimer[k] = 0;
+				}
+			}
+			SkeletonKnockback(fElapsedTime);
 		}
 	}
 	void SkeleTest(olc::PixelGameEngine* pge, float fElapsedTime) {
@@ -549,7 +602,7 @@ public:
 		//If Closest Skeleton is above player
 		if (ClosestSkelePos.y <= PlayerPos.y) {
 			//Enemies
-			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack);
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack, fElapsedTime);
 
 			//Draw Archer
 			Player.Draw(tv);
@@ -561,7 +614,7 @@ public:
 			Player.Draw(tv);
 
 			//Enemies
-			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack);
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack, fElapsedTime);
 		}
 
 		//HealthTest
