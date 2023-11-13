@@ -14,10 +14,121 @@
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
+float maxDistance = 3; //How far away the object can be to still be in range.
+float maxAngle = M_PI / 4; //The total sweeping angle of the arch in either direction (PI/4 is 45 degrees in either direction, 90 degrees total).
+
 //GameState
 enum GameStateEnum { DEBUG, GAME, PAUSED, EXIT, MENU };
 std::vector<GameStateEnum> GameState;
 
+//Math functions
+float angleDifference(float angle_1, float angle_2)
+{
+	angle_1 = fmod(angle_1, 2 * 3.14159f);
+	angle_2 = fmod(angle_2, 2 * 3.14159f);
+	float angle_diff = angle_1 - angle_2;
+
+	if (angle_diff > 3.14159f)
+		angle_diff -= 2 * 3.14159f;
+	else if (angle_diff < -3.14159f)
+		angle_diff += 2 * 3.14159f;
+
+	return -angle_diff;
+}
+olc::vf2d GetWorldMousePos(olc::TileTransformedView& tv, olc::PixelGameEngine* pge) {
+	return pge->GetMousePos() / 32 + tv.GetWorldOffset();
+}
+float PointTo(olc::vf2d pos1, olc::vf2d pos2) {
+	return atan2(pos2.y - pos1.y, pos2.x - pos1.x);
+}
+
+//Classes
+class Player {
+public:
+
+	//Sprites
+	std::unique_ptr<olc::Sprite> ArcherRight;
+	std::unique_ptr<olc::Sprite> ArcherLeft;
+	std::unique_ptr<olc::Sprite> Shadow;
+
+	//Decals
+	olc::Decal* ArcherRightDecal;
+	olc::Decal* ArcherLeftDecal;
+	olc::Decal* ShadowDecal;
+
+	olc::vf2d PlayerPos{ 300.0f, 300.0f };
+	olc::vf2d MousePos;
+	bool ArcherDir = true;
+	int CharacterHealth = 6;
+	float PlayerSpeed;
+
+	void Draw(olc::TileTransformedView& tv) {
+		//Draw Archer
+		if (ArcherDir == true) {
+			tv.DrawDecal({ PlayerPos.x - 0.13f, PlayerPos.y + 0.9f }, ShadowDecal, { 2.0f, 2.0f });
+			tv.DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
+		}
+		if (ArcherDir == false) {
+			tv.DrawDecal({ PlayerPos.x + 0.13f, PlayerPos.y + 0.9f }, ShadowDecal, { 2.0f, 2.0f });
+			tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
+		}
+	}
+	olc::vf2d Input(olc::PixelGameEngine* pge, float fElapsedTime) {
+		PlayerSpeed = 8.0f * fElapsedTime;
+		// Handle input and move the player
+		if (pge->GetKey(olc::Key::LEFT).bHeld || (pge->GetKey(olc::Key::A).bHeld)) {
+			PlayerPos.x -= PlayerSpeed;
+			ArcherDir = false;
+		}
+		if (pge->GetKey(olc::Key::RIGHT).bHeld || (pge->GetKey(olc::Key::D).bHeld)) {
+			PlayerPos.x += PlayerSpeed;
+			ArcherDir = true;
+		}
+		if (pge->GetKey(olc::Key::UP).bHeld || (pge->GetKey(olc::Key::W).bHeld)) {
+			PlayerPos.y -= PlayerSpeed;
+		}
+		if (pge->GetKey(olc::Key::DOWN).bHeld || (pge->GetKey(olc::Key::S).bHeld)) {
+			PlayerPos.y += PlayerSpeed;
+		}
+
+		if (PlayerPos.x > 965) {
+			PlayerPos.x = 964;
+		}
+		if (PlayerPos.x < -8) {
+			PlayerPos.x = -7;
+		}
+		if (PlayerPos.y > 512) {
+			PlayerPos.y = 511;
+		}
+		if (PlayerPos.y < -5) {
+			PlayerPos.y = -4;
+		}
+		return PlayerPos;
+	}
+	GameStateEnum EscapeInput(olc::PixelGameEngine* pge) {
+		if (pge->GetKey(olc::Key::ESCAPE).bPressed) {
+			GameState[1] = GameState[0];
+			GameState[0] = PAUSED;
+		}
+		return GameState[0], GameState[1];
+	}
+	int HealthTest(olc::PixelGameEngine* pge) {
+		if (pge->GetMouse(0).bPressed) {
+			CharacterHealth--;
+		}
+		return CharacterHealth;
+	}
+	void Initialize(olc::PixelGameEngine* pge) {
+		//Sprites
+		ArcherRight = std::make_unique<olc::Sprite>("./Sprites/ArcherRight.png");
+		ArcherLeft = std::make_unique<olc::Sprite>("./Sprites/ArcherLeft.png");
+		Shadow = std::make_unique<olc::Sprite>("./Sprites/Shadow.png");
+		//Decals
+		ArcherRightDecal = new olc::Decal(ArcherRight.get());
+		ArcherLeftDecal = new olc::Decal(ArcherLeft.get());
+		ShadowDecal = new olc::Decal(Shadow.get());
+	}
+};
 class GUI {
 public:
 	//Sprites
@@ -80,19 +191,20 @@ public:
 			pge->DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
 		}
 	}
-	void DrawDebugVariables(olc::PixelGameEngine* pge, olc::vf2d PlayerPos, int CharacterHealth) {
+	void DrawDebugVariables(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, int CharacterHealth) {
 		//PlayerPos
-		std::string ArcherX = std::to_string(PlayerPos.x);
-		std::string ArcherY = std::to_string(PlayerPos.y);
+		std::string PlayerX = std::to_string(PlayerPos.x);
+		std::string PlayerY = std::to_string(PlayerPos.y);
 
-		pge->DrawStringDecal({ 10.0f, 10.0f }, "ArcherX", olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 140.0f, 10.0f }, ArcherX, olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 10.0f, 30.0f }, "ArcherY", olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 140.0f, 30.0f }, ArcherY, olc::WHITE, { 2.0f, 2.0f });
+		pge->DrawStringDecal({ 10.0f, 10.0f }, "PlayerX", olc::WHITE, { 2.0f, 2.0f });
+		pge->DrawStringDecal({ 140.0f, 10.0f }, PlayerX, olc::WHITE, { 2.0f, 2.0f });
+		pge->DrawStringDecal({ 10.0f, 30.0f }, "PlayerY", olc::WHITE, { 2.0f, 2.0f });
+		pge->DrawStringDecal({ 140.0f, 30.0f }, PlayerY, olc::WHITE, { 2.0f, 2.0f });
 
 		//MousePos
-		std::string MouseX = std::to_string(pge->GetMouseX());
-		std::string MouseY = std::to_string(pge->GetMouseY());
+		olc::vf2d MousePos = { GetWorldMousePos(tv, pge) };
+		std::string MouseX = std::to_string(MousePos.x);
+		std::string MouseY = std::to_string(MousePos.y);
 
 		pge->DrawStringDecal({ 10.0f, 60.0f }, "MouseX", olc::WHITE, { 2.0f, 2.0f });
 		pge->DrawStringDecal({ 140.0f, 60.0f }, MouseX, olc::WHITE, { 2.0f, 2.0f });
@@ -116,7 +228,7 @@ public:
 		}
 		return GameState[0], GameState[1];
 	}
-	void doPauseScreen(olc::PixelGameEngine* pge, int CharacterHealth, olc::vf2d PlayerPos) {
+	void doPauseScreen(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, int CharacterHealth, olc::vf2d PlayerPos) {
 		const olc::vf2d scale = { 1.0f, 1.0f };
 		//Resume variables
 		const bool resume_hovered = (pge->GetMouseX() >= 400 && pge->GetMouseY() >= 158 && pge->GetMouseX() <= 634 && pge->GetMouseY() <= 194);
@@ -148,131 +260,100 @@ public:
 
 		//Draw variables
 		if (GameState[1] == DEBUG) {
-			DrawDebugVariables(pge, PlayerPos, CharacterHealth);
+			DrawDebugVariables(tv, pge, PlayerPos, CharacterHealth);
 		}
 
 		PauseScreenInput(pge, resume_hovered, options_hovered, quit_hovered);
 	}
 };
-class Player {
+class Skeleton {
 public:
+	//Skele variables
+	std::vector<olc::vf2d> SkelePos;
+	olc::vf2d SkeleSize{ 1.1f, 1.7f };
+	//Player
+	olc::vf2d PlayerSize{ 1.1f, 1.7f };
 
+	olc::vf2d Zero{ 0.0f, 0.0f };
+	
 	//Sprites
-	std::unique_ptr<olc::Sprite> ArcherRight;
-	std::unique_ptr<olc::Sprite> ArcherLeft;
+	std::unique_ptr<olc::Sprite> SkeleRight;
+	std::unique_ptr<olc::Sprite> SkeleRightHurt;
+	std::unique_ptr<olc::Sprite> Shadow;
 
 	//Decals
-	olc::Decal* ArcherRightDecal;
-	olc::Decal* ArcherLeftDecal;
+	olc::Decal* SkeleRightDecal;
+	olc::Decal* SkeleRightHurtDecal;
+	olc::Decal* ShadowDecal;
+	void Spawn() {
+		if (SkelePos.size() < 1) {
+			SkelePos.push_back({ 305, 305 });
+		}
+	}
+	olc::vf2d ReturnClosestPos(olc::vf2d PlayerPos) {
+		float ClosestSkeleDis = 1000.0f;
+		olc::vf2d ClosestSkelePos;
+		for (int k = 0; k < SkelePos.size(); k++) {
 
-	olc::vf2d PlayerPos{ 300.0f, 300.0f };
-	olc::vf2d MousePos;
-	bool ArcherDir = true;
-	int CharacterHealth = 6;
-	float PlayerSpeed;
+			float dx = SkelePos[k].x - PlayerPos.x;
+			float dy = SkelePos[k].y - PlayerPos.y;
 
-	float angleDifference(float angle_1, float angle_2)
-	{
-		angle_1 = fmod(angle_1, 2 * 3.14159f);
-		angle_2 = fmod(angle_2, 2 * 3.14159f);
-		float angle_diff = angle_1 - angle_2;
+			float dis = sqrt(dx * dx + dy * dy);
+			if (dis < ClosestSkeleDis) {
+				ClosestSkeleDis = dis;
+				ClosestSkelePos = SkelePos[k];
+			}
+		}
+		return ClosestSkelePos;
+	}
+	void Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float PlayerSpeed) {
+		Spawn();
+		for (int k = 0; k < SkelePos.size(); k++) {
+			olc::vi2d Skele(SkelePos[k].x + 0.5, SkelePos[k].y + 0.1f);
+			olc::vi2d UPlayerPos(PlayerPos.x + 0.4f, PlayerPos.y + 0.11f);
 
-		if (angle_diff > 3.14159f)
-			angle_diff -= 2 * 3.14159f;
-		else if (angle_diff < -3.14159f)
-			angle_diff += 2 * 3.14159f;
+			olc::vf2d dir = (PlayerPos - SkelePos[k]).norm();
 
-		return -angle_diff;
-	}
-	olc::vf2d GetWorldMousePos(olc::TileTransformedView& tv, olc::PixelGameEngine* pge) {
-		return pge->GetMousePos() / 32 + tv.GetWorldOffset();
-	}
-	void Draw(olc::TileTransformedView& tv) {
-		//Draw Archer
-		if (ArcherDir == true) {
-			tv.DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
-		}
-		if (ArcherDir == false) {
-			tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
-		}
-	}
-	float PointTo(olc::vf2d pos1, olc::vf2d pos2) {
-		return atan2(pos2.y - pos1.y, pos2.x - pos1.x);
-	}
-	void Attack(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d GoopPos) {
-		MousePos = { GetWorldMousePos(tv, pge) };
-		olc::vf2d PlayerDir = (-(PlayerPos - MousePos).norm());
-		float angleTowards = PointTo(PlayerPos, GoopPos); //Calculate the angle towards a target.
-		float angleDiff = angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
-		float maxDistance = 3; //How far away the object can be to still be in range.
-		float maxAngle = M_PI / 4; //The total sweeping angle of the arch in either direction (PI/4 is 45 degrees in either direction, 90 degrees total).
+			//Collision
+			if (Skele.x < UPlayerPos.x + PlayerSize.x
+				&& Skele.x + SkeleSize.x > UPlayerPos.x
+				&& Skele.y < UPlayerPos.y + PlayerSize.y
+				&& Skele.y + SkeleSize.y > UPlayerPos.y) {
+				//Direction of player
+				olc::vf2d dir = (PlayerPos - SkelePos[k]).norm();
+				SkelePos[k] += -dir * PlayerSpeed;
+			}
 
-		if (
-			sqrt(pow(PlayerPos.x - GoopPos.x, 2) + pow(PlayerPos.y - GoopPos.y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
-			&& abs(angleDiff) < maxAngle  //See if the target's angle is within the sweeping arc range.
-			&& pge->GetMouse(0).bHeld) {
-			//Target is in range.
-			tv.FillRectDecal({ GoopPos }, { 2.0f, 2.0f }, olc::RED);
-		}
-		else {
-			tv.FillRectDecal({ GoopPos }, { 2.0f, 2.0f }, olc::GREEN);//Target is out of range.
+			//Hit check
+			olc::vf2d MousePos = { GetWorldMousePos(tv, pge) };
+			olc::vf2d PlayerDir = (-(PlayerPos - MousePos).norm());
+			float angleTowards = PointTo(PlayerPos, SkelePos[k]); //Calculate the angle towards a target.
+			float angleDiff = angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
+			if (
+				sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
+				&& abs(angleDiff) < maxAngle  //See if the target's angle is within the sweeping arc range.
+				&& pge->GetMouse(0).bHeld) {
+				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 2.0f, 2.0f });
+				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, {2.3f, 2.3f});
+				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+			}
+			else {
+				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 1.8f, 1.8f });
+				tv.DrawDecal({ SkelePos[k] }, SkeleRightDecal, { 2.0f, 2.0f });
+			}
 		}
 	}
-	olc::vf2d Input(olc::PixelGameEngine* pge, float fElapsedTime){
-		PlayerSpeed = 8.0f * fElapsedTime;
-		// Handle input and move the player
-		if (pge->GetKey(olc::Key::LEFT).bHeld || (pge->GetKey(olc::Key::A).bHeld)) {
-			PlayerPos.x -= PlayerSpeed;
-			ArcherDir = false;
-		}
-		if (pge->GetKey(olc::Key::RIGHT).bHeld || (pge->GetKey(olc::Key::D).bHeld)) {
-			PlayerPos.x += PlayerSpeed;
-			ArcherDir = true;
-		}
-		if (pge->GetKey(olc::Key::UP).bHeld || (pge->GetKey(olc::Key::W).bHeld)) {
-			PlayerPos.y -= PlayerSpeed;
-		}
-		if (pge->GetKey(olc::Key::DOWN).bHeld || (pge->GetKey(olc::Key::S).bHeld)) {
-			PlayerPos.y += PlayerSpeed;
-		}
-
-		if (PlayerPos.x > 965) {
-			PlayerPos.x = 964;
-		}
-		if (PlayerPos.x < -8) {
-			PlayerPos.x = -7;
-		}
-		if (PlayerPos.y > 512) {
-			PlayerPos.y = 511;
-		}
-		if (PlayerPos.y < -5) {
-			PlayerPos.y = -4;
-		}
-		return PlayerPos;
-	}
-	GameStateEnum EscapeInput(olc::PixelGameEngine* pge) {
-		if (pge->GetKey(olc::Key::ESCAPE).bPressed) {
-			GameState[1] = GameState[0];
-			GameState[0] = PAUSED;
-		}
-		return GameState[0], GameState[1];
-	}
-	int HealthTest(olc::PixelGameEngine* pge) {
-		if (pge->GetMouse(0).bPressed) {
-			CharacterHealth--;
-		}
-		return CharacterHealth;
-	}
-	void Initialize(olc::PixelGameEngine* pge) {
+	void Initialize() {
 		//Sprites
-		ArcherRight = std::make_unique<olc::Sprite>("./Sprites/ArcherRight.png");
-		ArcherLeft = std::make_unique<olc::Sprite>("./Sprites/ArcherLeft.png");
+		SkeleRight = std::make_unique<olc::Sprite>("./Sprites/SkeletonRight.png");
+		SkeleRightHurt = std::make_unique<olc::Sprite>("./Sprites/SkeletonRightHurt.png");
+		Shadow = std::make_unique<olc::Sprite>("./Sprites/Shadow.png");
 		//Decals
-		ArcherRightDecal = new olc::Decal(ArcherRight.get());
-		ArcherLeftDecal = new olc::Decal(ArcherLeft.get());
+		SkeleRightDecal = new olc::Decal(SkeleRight.get());
+		SkeleRightHurtDecal = new olc::Decal(SkeleRightHurt.get());
+		ShadowDecal = new olc::Decal(Shadow.get());
 	}
 };
-
 class Pixel_Adventure : public olc::PixelGameEngine {
 public:
 
@@ -305,32 +386,11 @@ public:
 	bool ArchDrawn = false;
 
 	Player Player;
+	Skeleton Skeleton;
 	GUI GUI;
 
 	Pixel_Adventure() {
 		sAppName = "Pixel Adventure";
-	}
-	void DrawPlayerArch() {
-		// Get the mouse cursor position
-		int mouseX = GetMouseX();
-		int mouseY = GetMouseY();
-
-		// Calculate the direction vector from the origin to the cursor position
-		olc::vf2d dir = { static_cast<float>(mouseX) - PlayerPos.x, static_cast<float>(mouseY) - PlayerPos.y };
-
-		// Calculate the angle between the cursor vector and the right vector (1, 0)
-		float angle = atan2(dir.y, dir.x);
-
-		// Draw the arch as two lines forming a 30-degree angle
-		float halfAngle = 30.0f * (static_cast<float>(M_PI) / 180.0f); // 30 degrees in radians
-		olc::vf2d p1 = PlayerPos + radius * olc::vf2d(cos(angle - halfAngle), sin(angle - halfAngle));
-		olc::vf2d p2 = PlayerPos + radius * olc::vf2d(cos(angle + halfAngle), sin(angle + halfAngle));
-
-		// Draw the lines forming the arch
-		tv.DrawLineDecal({ PlayerPos.x, PlayerPos.y }, { p1.x, p1.y }, olc::WHITE);
-		tv.DrawLineDecal({ PlayerPos.x, PlayerPos.y }, { p2.x, p2.y }, olc::WHITE);
-
-		ArchDrawn = true;
 	}
 	//User inputs
 	void PauseScreenInputs(bool resume_hovered, bool options_hovered, bool quit_hovered) {
@@ -432,13 +492,29 @@ public:
 
 		DrawBGCamera();
 
-		//Draw Archer
-		Player.Draw(tv);
+		//Get ClosestSkelePos
+		olc::vf2d ClosestSkelePos = Skeleton.ReturnClosestPos(PlayerPos);
 
-		Player.Attack(tv, this, GoopPos);
+		//If Closest Skeleton is above player
+		if (ClosestSkelePos.y <= PlayerPos.y) {
+			//Enemies
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed);
+
+			//Draw Archer
+			Player.Draw(tv);
+		}
+
+		//If Closest Skeleton is below player
+		else {
+			//Draw Archer
+			Player.Draw(tv);
+
+			//Enemies
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed);
+		}
 
 		//Draw variables
-		GUI.DrawDebugVariables(this, PlayerPos, CharacterHealth);
+		GUI.DrawDebugVariables(tv, this, PlayerPos, CharacterHealth);
 
 		//Draw Hearts
 		GUI.Hearts(this, CharacterHealth);
@@ -457,7 +533,7 @@ public:
 			return true;
 		}
 		if (GameState[0] == PAUSED) {
-			GUI.doPauseScreen(this, CharacterHealth, PlayerPos);
+			GUI.doPauseScreen(tv, this, CharacterHealth, PlayerPos);
 		}
 		if (GameState[0] == EXIT) {
 			return false;
@@ -469,6 +545,8 @@ private:
 		GameState.push_back(MENU);
 		GameState.push_back(MENU);
 
+		//Initialize Sprites for Skeletons
+		Skeleton.Initialize();
 		//Initialize player sprites/decals
 		Player.Initialize(this);
 		//Initialize GUI sprites/decals
