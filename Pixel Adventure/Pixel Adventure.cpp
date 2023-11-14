@@ -47,13 +47,15 @@ class Player {
 public:
 
 	//Sprites
-	std::unique_ptr<olc::Sprite> ArcherRight;
-	std::unique_ptr<olc::Sprite> ArcherLeft;
+	std::unique_ptr<olc::Sprite> PlayerRight;
+	std::unique_ptr<olc::Sprite> PlayerLeft;
+	std::unique_ptr<olc::Sprite> PlayerDead;
 	std::unique_ptr<olc::Sprite> Shadow;
 
 	//Decals
-	olc::Decal* ArcherRightDecal;
-	olc::Decal* ArcherLeftDecal;
+	olc::Decal* PlayerRightDecal;
+	olc::Decal* PlayerLeftDecal;
+	olc::Decal* PlayerDeadDecal;
 	olc::Decal* ShadowDecal;
 
 	olc::vf2d PlayerPos{ 300.0f, 300.0f };
@@ -67,12 +69,16 @@ public:
 	void Draw(olc::TileTransformedView& tv) {
 		//Draw Archer
 		if (ArcherDir == true) {
-			tv.DrawDecal({ PlayerPos.x - 0.13f, PlayerPos.y + 0.9f }, ShadowDecal, { 2.0f, 2.0f });
-			tv.DrawDecal({ PlayerPos }, ArcherRightDecal, { 2.0f, 2.0f });
+			tv.DrawRectDecal({ PlayerPos.x - 0.4f, PlayerPos.y - 1.0f }, { 0.9f, 2.0f }, olc::WHITE);
+			tv.DrawDecal({ PlayerPos.x - 1.0f, PlayerPos.y }, ShadowDecal, { 2.0f, 2.0f });
+			tv.DrawDecal({ PlayerPos.x - 1.9f, PlayerPos.y - 2.0f }, PlayerRightDecal, { 4.0f, 4.0f });
+			tv.DrawRectDecal({ PlayerPos }, { 0.25f, 0.25f }, olc::WHITE);
 		}
 		if (ArcherDir == false) {
-			tv.DrawDecal({ PlayerPos.x + 0.13f, PlayerPos.y + 0.9f }, ShadowDecal, { 2.0f, 2.0f });
-			tv.DrawDecal({ PlayerPos }, ArcherLeftDecal, { 2.0f, 2.0f });
+			tv.DrawRectDecal({ PlayerPos.x - 0.4f, PlayerPos.y - 1.0f }, { 0.9f, 2.0f }, olc::WHITE);
+			tv.DrawDecal({ PlayerPos.x - 1.0f, PlayerPos.y }, ShadowDecal, { 2.0f, 2.0f });
+			tv.DrawDecal({ PlayerPos.x - 1.9f, PlayerPos.y - 2.0f }, PlayerLeftDecal, { 4.0f, 4.0f });
+			tv.DrawRectDecal({ PlayerPos }, { 1.0, 1.0f }, olc::WHITE);
 		}
 	}
 	olc::vf2d Input(olc::PixelGameEngine* pge, float fElapsedTime) {
@@ -137,12 +143,14 @@ public:
 	}
 	void Initialize(olc::PixelGameEngine* pge) {
 		//Sprites
-		ArcherRight = std::make_unique<olc::Sprite>("./Sprites/ArcherRight.png");
-		ArcherLeft = std::make_unique<olc::Sprite>("./Sprites/ArcherLeft.png");
+		PlayerRight = std::make_unique<olc::Sprite>("./Sprites/CharacterRightFacing.png");
+		PlayerLeft = std::make_unique<olc::Sprite>("./Sprites/CharacterLeftFacing.png");
+		PlayerDead = std::make_unique<olc::Sprite>("./Sprites/CharacterDeathPose.png");
 		Shadow = std::make_unique<olc::Sprite>("./Sprites/Shadow.png");
 		//Decals
-		ArcherRightDecal = new olc::Decal(ArcherRight.get());
-		ArcherLeftDecal = new olc::Decal(ArcherLeft.get());
+		PlayerRightDecal = new olc::Decal(PlayerRight.get());
+		PlayerLeftDecal = new olc::Decal(PlayerLeft.get());
+		PlayerDeadDecal = new olc::Decal(PlayerDead.get());
 		ShadowDecal = new olc::Decal(Shadow.get());
 	}
 };
@@ -269,7 +277,7 @@ public:
 		Hearts(pge, CharacterHealth);
 
 		//Draw pause opacity
-			pge->DrawDecal({ 0.0f, 0.0f }, PauseScreenDecal, { 1.0f, 1.0f });
+		pge->DrawDecal({ 0.0f, 0.0f }, PauseScreenDecal, { 1.0f, 1.0f });
 
 		pge->DrawStringDecal({ resume_XCoord, resume_YCoord }, "RESUME", olc::WHITE, scale * resume_zoom);
 		pge->DrawStringDecal({ options_XCoord, options_YCoord }, "OPTIONS", olc::WHITE, scale * options_zoom);
@@ -287,14 +295,18 @@ class Skeleton {
 public:
 	//Skele variables
 	std::vector<olc::vf2d> SkelePos;
-	olc::vf2d SkeleSize{ 1.1f, 1.7f };
+	olc::vf2d SkeleSize{ 1.1f, 1.8f };
 	std::vector<int> SkeleHit;
 	std::vector<olc::vf2d> SkeleTarget;
+	std::vector<int> SkeleRedTimer;
+	std::vector<olc::vf2d> DirOfHit;
+	std::vector<olc::vf2d> DistTraveled;
+	std::vector<float> JumpDistTraveled;
 	//Player
-	olc::vf2d PlayerSize{ 1.1f, 1.7f };
+	olc::vf2d PlayerSize{ 0.9f, 2.0f };
 
 	olc::vf2d Zero{ 0.0f, 0.0f };
-	
+
 	//Sprites
 	std::unique_ptr<olc::Sprite> SkeleRight;
 	std::unique_ptr<olc::Sprite> SkeleRightHurt;
@@ -310,6 +322,10 @@ public:
 				SkelePos.push_back({ 305, 305 });
 				SkeleHit.push_back(0);
 				SkeleTarget.push_back({ SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f });
+				SkeleRedTimer.push_back(0);
+				DirOfHit.push_back({ 0.0f, 0.0f });
+				DistTraveled.push_back({ 0.0f, 0.0f });
+				JumpDistTraveled.push_back(0.0f);
 			}
 		}
 	}
@@ -329,13 +345,39 @@ public:
 		}
 		return ClosestSkelePos;
 	}
-	void Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float PlayerSpeed, bool PlayerCanAttack) {
+	void SkeletonKnockback(float fElapsedTime) {
+		float KnockbackSpeed = 12 * fElapsedTime;
+		float JumpSpeed = 8 * fElapsedTime;
+		for (int k = 0; k < SkelePos.size(); k++) {
+			if (SkeleHit[k] == 1) {
+				if ((DistTraveled[k].x <= -1.5f || DistTraveled[k].y <= -1.5f) && JumpDistTraveled[k] >= 2.0f) {
+					SkeleHit[k] = 0;
+					DistTraveled[k] = { 0.0f, 0.0f };
+					JumpDistTraveled[k] = 0.0f;
+				}
+				else {
+					SkelePos[k] -= DirOfHit[k] * KnockbackSpeed;
+					DistTraveled[k] += DirOfHit[k] * KnockbackSpeed;
+					if (JumpDistTraveled[k] < 1.0f) {
+						SkelePos[k].x -= JumpSpeed;
+						JumpDistTraveled[k] += JumpSpeed;
+					}
+					else if (JumpDistTraveled[k] >= 1.0f && JumpDistTraveled[k] < 2.0f) {
+						SkelePos[k].x += JumpSpeed;
+						JumpDistTraveled[k] += JumpSpeed;
+					}
+					else if (JumpDistTraveled[k] >= 2.0f) {
+
+					}
+				}
+			}
+		}
+	}
+	void Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float PlayerSpeed, bool PlayerCanAttack, float fElapsedTime) {
 		Spawn();
 		for (int k = 0; k < SkelePos.size(); k++) {
-			olc::vi2d Skele(SkelePos[k].x + 0.5, SkelePos[k].y + 0.1f);
-			olc::vi2d UPlayerPos(PlayerPos.x + 0.4f, PlayerPos.y + 0.11f);
-
-			olc::vf2d dir = (PlayerPos - SkelePos[k]).norm();
+			olc::vi2d Skele(SkelePos[k].x - 0.5f, SkelePos[k].y - 0.85f);
+			olc::vi2d UPlayerPos(PlayerPos.x - 0.4f, PlayerPos.y - 1.0f);
 
 			//Collision
 			if (Skele.x < UPlayerPos.x + PlayerSize.x
@@ -355,26 +397,45 @@ public:
 			if (
 				sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
 				&& abs(angleDiff) < maxAngle  //See if the target's angle is within the sweeping arc range.
-				&& pge->GetMouse(0).bPressed
-				&& PlayerCanAttack == true) {
+				&& pge->GetMouse(0).bPressed) {
+				//&& PlayerCanAttack == true) {
 				//Hit
+				DirOfHit[k] = (PlayerPos - SkelePos[k]).norm();
+				SkeleRedTimer[k] = 1;
 				SkeleHit[k] = 1;
 				SkeleTarget[k] = { SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f };
 				SkeleTarget.push_back({ SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f });
 				SkeleTarget[k] = { SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f };
 				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 2.0f, 2.0f });
-				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, {2.3f, 2.3f});
+				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, { 2.3f, 2.3f });
 				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
 			}
-			else {
-				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 1.8f, 1.8f });
-				tv.DrawDecal({ SkelePos[k] }, SkeleRightDecal, { 2.0f, 2.0f });
+			//If not hit, draw normal skeleton
+			else if (SkeleRedTimer[k] == 0) {
+				tv.DrawRectDecal({ SkelePos[k].x - 0.5f, SkelePos[k].y - 0.85f }, { 1.14f, 1.84f }, olc::RED);
+				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+				tv.DrawDecal({ SkelePos[k].x - 1.0f, SkelePos[k].y - 1.0f}, SkeleRightDecal, {2.0f, 2.0f});
+				tv.DrawRectDecal({ SkelePos[k]}, {0.25f, 0.25f}, olc::RED);
 			}
+			//Draw hurt skeleton for 10 frames
+			if (SkeleRedTimer[k] > 0) {
+				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 2.0f, 2.0f });
+				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, { 2.3f, 2.3f });
+				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+				SkeleRedTimer[k]++;
+				if (SkeleRedTimer[k] == 10) {
+					tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 2.0f, 2.0f });
+					tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, { 2.3f, 2.3f });
+					tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+					SkeleRedTimer[k] = 0;
+				}
+			}
+			SkeletonKnockback(fElapsedTime);
 		}
 	}
 	void SkeleTest(olc::PixelGameEngine* pge, float fElapsedTime) {
 		float SkeleSpeed = 8.0f * fElapsedTime;
-		
+
 		for (int k = 0; k < SkelePos.size(); k++) {
 			if (pge->GetKey(olc::Key::I).bPressed) {
 				SkelePos[k].y += 0.5f;
@@ -549,7 +610,7 @@ public:
 		//If Closest Skeleton is above player
 		if (ClosestSkelePos.y <= PlayerPos.y) {
 			//Enemies
-			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack);
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack, fElapsedTime);
 
 			//Draw Archer
 			Player.Draw(tv);
@@ -561,7 +622,7 @@ public:
 			Player.Draw(tv);
 
 			//Enemies
-			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack);
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack, fElapsedTime);
 		}
 
 		//HealthTest
@@ -626,7 +687,7 @@ private:
 		GameState.push_back(MENU);
 		GameState.push_back(MENU);
 
-		
+
 
 		//Sprites
 		Grass = std::make_unique<olc::Sprite>("./Sprites/Grass.png");
