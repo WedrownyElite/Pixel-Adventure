@@ -414,8 +414,8 @@ public:
 			else if (SkeleRedTimer[k] == 0) {
 				tv.DrawRectDecal({ SkelePos[k].x - 0.5f, SkelePos[k].y - 0.85f }, { 1.14f, 1.84f }, olc::RED);
 				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
-				tv.DrawDecal({ SkelePos[k].x - 1.0f, SkelePos[k].y - 1.0f}, SkeleRightDecal, {2.0f, 2.0f});
-				tv.DrawRectDecal({ SkelePos[k]}, {0.25f, 0.25f}, olc::RED);
+				tv.DrawDecal({ SkelePos[k].x - 1.0f, SkelePos[k].y - 1.0f }, SkeleRightDecal, { 2.0f, 2.0f });
+				tv.DrawRectDecal({ SkelePos[k] }, { 0.25f, 0.25f }, olc::RED);
 			}
 			//Draw hurt skeleton for 10 frames
 			if (SkeleRedTimer[k] > 0) {
