@@ -43,6 +43,11 @@ float PointTo(olc::vf2d pos1, olc::vf2d pos2) {
 }
 
 //Classes
+class EnemyFunctions {
+	void Knockback(olc::PixelGameEngine* pge, olc::vf2d PlayerPos, olc::vf2d EnemyPos) {
+
+	}
+};
 class Player {
 public:
 
@@ -66,6 +71,7 @@ public:
 	int CharacterHealth = 6;
 	float PlayerSpeed;
 
+	EnemyFunctions Enemy;
 	void Draw(olc::TileTransformedView& tv) {
 		//Draw Archer
 		if (ArcherDir == true) {
@@ -295,7 +301,7 @@ class Skeleton {
 public:
 	//Skele variables
 	std::vector<olc::vf2d> SkelePos;
-	olc::vf2d SkeleSize{ 1.1f, 1.8f };
+	olc::vf2d SkeleSize{ 1.1f, 0.6f };
 	std::vector<int> SkeleHit;
 	std::vector<olc::vf2d> SkeleTarget;
 	std::vector<int> SkeleRedTimer;
@@ -303,7 +309,7 @@ public:
 	std::vector<olc::vf2d> DistTraveled;
 	std::vector<float> JumpDistTraveled;
 	//Player
-	olc::vf2d PlayerSize{ 0.9f, 2.0f };
+	olc::vf2d PlayerSize{ 0.7f, 0.8f };
 
 	olc::vf2d Zero{ 0.0f, 0.0f };
 
@@ -376,8 +382,8 @@ public:
 	void Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float PlayerSpeed, bool PlayerCanAttack, float fElapsedTime) {
 		Spawn();
 		for (int k = 0; k < SkelePos.size(); k++) {
-			olc::vi2d Skele(SkelePos[k].x - 0.5f, SkelePos[k].y - 0.85f);
-			olc::vi2d UPlayerPos(PlayerPos.x - 0.4f, PlayerPos.y - 1.0f);
+			olc::vf2d Skele(SkelePos[k].x - 0.5f, SkelePos[k].y - 0.85f);
+			olc::vf2d UPlayerPos(PlayerPos.x - 0.4f, PlayerPos.y - 1.0f);
 
 			//Collision
 			if (Skele.x < UPlayerPos.x + PlayerSize.x
