@@ -14,7 +14,7 @@
 #define M_PI 3.14159265358979323846264338327950288
 #endif
 
-float maxDistance = 3; //How far away the object can be to still be in range.
+float maxDistance = 2.0f; //How far away the object can be to still be in range.
 float maxAngle = M_PI / 4; //The total sweeping angle of the arch in either direction (PI/4 is 45 degrees in either direction, 90 degrees total).
 
 //GameState
@@ -47,36 +47,31 @@ class EnemyFunctions {
 private:
 	float JumpHeight = 1.0f;
 	float KnockbackSpeed = 12.0f;
+	float JumpSpeed = 6.0f;
 
 public:
-	float ReturnJumpVel(std::vector<float>JumpVelocity, int Container, float fElapsedTime) {
-		JumpVelocity[Container] += 9.81f * fElapsedTime;
+	float ReturnDistTraveled(float DistTraveled, float fElapsedTime) {
+		float DistThisFrame = KnockbackSpeed * fElapsedTime;
+		DistTraveled += DistThisFrame;
 
-		return JumpVelocity[Container];
+		return DistTraveled;
 	}
-	float ReturnDistance(std::vector<float> DistanceTraveled, int Container, float fElapsedTime) {
-		//Distance moved this frame
-		float DistanceThisFrame = KnockbackSpeed * fElapsedTime;
-		DistanceTraveled[Container] += DistanceThisFrame;
-
-		return DistanceTraveled[Container];
-	}
-	olc::vf2d ReturnPos(olc::vf2d PlayerPos, olc::vf2d EnemyPos, float fElapsedTime) {
-		olc::vf2d dir = (PlayerPos - EnemyPos).norm();
-
-		//Distance moved this frame
-		float DistanceThisFrame = KnockbackSpeed * fElapsedTime;
-		EnemyPos -= dir * DistanceThisFrame;
-
-		return EnemyPos;
-	}
-	int ReturnHit(std::vector<float> DistanceTraveled, int Container, int Hit) {
-
-		if (DistanceTraveled[Container] >= 2.0f) {
+	int ReturnHit(float DistTraveled, int Hit) {
+		if (DistTraveled >= 2.0f) {
 			Hit = 0;
-			return Hit;
 		}
 		return Hit;
+	}
+	olc::vf2d Knockback(olc::vf2d PlayerPos, olc::vf2d EnemyPos, float fElapsedTime) {
+
+		olc::vf2d dir = (PlayerPos - EnemyPos).norm();
+
+		float DistThisFrame = KnockbackSpeed * fElapsedTime;
+
+		EnemyPos -= dir * DistThisFrame;
+
+		return EnemyPos;
+
 	}
 };
 class Player {
@@ -106,16 +101,12 @@ public:
 	void Draw(olc::TileTransformedView& tv) {
 		//Draw Archer
 		if (ArcherDir == true) {
-			tv.DrawRectDecal({ PlayerPos.x - 0.4f, PlayerPos.y - 1.0f }, { 0.9f, 2.0f }, olc::WHITE);
 			tv.DrawDecal({ PlayerPos.x - 1.0f, PlayerPos.y }, ShadowDecal, { 2.0f, 2.0f });
 			tv.DrawDecal({ PlayerPos.x - 1.9f, PlayerPos.y - 2.0f }, PlayerRightDecal, { 4.0f, 4.0f });
-			tv.DrawRectDecal({ PlayerPos }, { 0.25f, 0.25f }, olc::WHITE);
 		}
 		if (ArcherDir == false) {
-			tv.DrawRectDecal({ PlayerPos.x - 0.4f, PlayerPos.y - 1.0f }, { 0.9f, 2.0f }, olc::WHITE);
 			tv.DrawDecal({ PlayerPos.x - 1.0f, PlayerPos.y }, ShadowDecal, { 2.0f, 2.0f });
 			tv.DrawDecal({ PlayerPos.x - 1.9f, PlayerPos.y - 2.0f }, PlayerLeftDecal, { 4.0f, 4.0f });
-			tv.DrawRectDecal({ PlayerPos }, { 1.0, 1.0f }, olc::WHITE);
 		}
 	}
 	olc::vf2d Input(olc::PixelGameEngine* pge, float fElapsedTime) {
@@ -337,9 +328,8 @@ private:
 	std::vector<int> SkeleHit;
 	std::vector<int> SkeleRedTimer;
 	std::vector<float> DistTraveled;
-	std::vector<float> JumpVelocity;
 	std::vector<int> JumpBool;
-	std::vector<olc::vf2d> PosBeforeJump;
+	std::vector<float> JumpDist;
 	//Player
 	olc::vf2d PlayerSize{ 0.7f, 0.8f };
 
@@ -365,7 +355,7 @@ public:
 				SkeleRedTimer.push_back(0);
 				DistTraveled.push_back(0.0f);
 				JumpBool.push_back(0);
-				PosBeforeJump.push_back({ 0.0f, 0.0f });
+				JumpDist.push_back(0.0f);
 			}
 		}
 	}
@@ -412,8 +402,6 @@ public:
 				&& pge->GetMouse(0).bPressed) {
 				//&& PlayerCanAttack == true) {
 				//Hit
-				PosBeforeJump[k] = SkelePos[k];
-				JumpVelocity[k] = -sqrt(2.0f * 9.81 * 1.0f);
 				JumpBool[k] = 1;
 				SkeleRedTimer[k] = 1;
 				SkeleHit[k] = 1;
@@ -422,23 +410,18 @@ public:
 				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
 			}
 			if (SkeleHit[k] == 1) {
-				//Call the god foresaken knockback functions
-				//Jumping
-				if (JumpBool[k] == 1) {
-
+				SkeleHit[k] = Enemy.ReturnHit(DistTraveled[k], SkeleHit[k]);
+				SkelePos[k] = Enemy.Knockback(PlayerPos, SkelePos[k], fElapsedTime);
+				DistTraveled[k] = Enemy.ReturnDistTraveled(DistTraveled[k], fElapsedTime);
+				if (SkeleRedTimer[k] == 0) {
+					tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+					tv.DrawDecal({ SkelePos[k].x - 1.0f, SkelePos[k].y - 1.0f }, SkeleRightDecal, { 2.0f, 2.0f });
 				}
-				//After jumping
-				if (JumpBool[k] == 0) {
-					SkelePos[k] = Enemy.ReturnPos(PlayerPos, SkelePos[k], fElapsedTime);
-					DistTraveled[k] = Enemy.ReturnDistance(DistTraveled, k, fElapsedTime);
-					SkeleHit[k] = Enemy.ReturnHit(DistTraveled, k, SkeleHit[k]);
-				}
-				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
-				tv.DrawDecal({ SkelePos[k].x - 1.0f, SkelePos[k].y - 1.0f }, SkeleRightDecal, { 2.0f, 2.0f });
 			}
 			//Reset Distance traveled
 			if (SkeleHit[k] == 0) {
 				DistTraveled[k] = 0.0f;
+				JumpDist[k] = 0.0f;
 			}
 			//If not hit, draw normal skeleton
 			if (SkeleRedTimer[k] == 0 && SkeleHit[k] == 0) {
@@ -451,7 +434,7 @@ public:
 				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
 				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
 				SkeleRedTimer[k]++;
-				if (SkeleRedTimer[k] == 11) {
+				if (SkeleRedTimer[k] == 21) {
 					tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
 					tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
 					tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
