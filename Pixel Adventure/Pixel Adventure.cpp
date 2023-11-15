@@ -143,9 +143,6 @@ public:
 		return PlayerPos;
 	}
 	bool AttackInput(olc::PixelGameEngine* pge, float fElapsedTime) {
-		if (pge->GetMouse(0).bPressed && PlayerCanAttack == true) {
-			PlayerCanAttack = false;
-		}
 		if (PlayerCanAttack == false) {
 			if (AttackCooldown < 0.5f) {
 				AttackCooldown += fElapsedTime;
@@ -435,18 +432,20 @@ public:
 			olc::vf2d PlayerDir = (-(PlayerPos - MousePos).norm());
 			float angleTowards = PointTo(PlayerPos, SkelePos[k]); //Calculate the angle towards a target.
 			float angleDiff = angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
-			if (
-				(sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
-				&& abs(angleDiff) < maxAngle)  //See if the target's angle is within the sweeping arc range.
-				&& PlayerCanAttack == true) {
-				//&& pge->GetMouse(0).bPressed) {
-				//Initiate hit
-				JumpBool[k] = 1;
-				SkeleRedTimer[k] = 1;
-				SkeleHit[k] = 1;
-				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
-				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
-				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+			if (PlayerCanAttack == true && pge->GetMouse(0).bPressed) {
+				PlayerCanAttack = false;
+				if (
+					(sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
+						&& abs(angleDiff) < maxAngle)  //See if the target's angle is within the sweeping arc range.
+					) {
+					//Initiate hit
+					JumpBool[k] = 1;
+					SkeleRedTimer[k] = 1;
+					SkeleHit[k] = 1;
+					tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+					tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
+					tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+				}
 			}
 			//Hit
 				Hurt(tv, PlayerPos, k, fElapsedTime);
