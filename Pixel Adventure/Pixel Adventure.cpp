@@ -44,8 +44,39 @@ float PointTo(olc::vf2d pos1, olc::vf2d pos2) {
 
 //Classes
 class EnemyFunctions {
-	void Knockback(olc::PixelGameEngine* pge, olc::vf2d PlayerPos, olc::vf2d EnemyPos) {
+private:
+	float JumpHeight = 1.0f;
+	float KnockbackSpeed = 12.0f;
 
+public:
+	float ReturnJumpVel(std::vector<float>JumpVelocity, int Container, float fElapsedTime) {
+		JumpVelocity[Container] += 9.81f * fElapsedTime;
+
+		return JumpVelocity[Container];
+	}
+	float ReturnDistance(std::vector<float> DistanceTraveled, int Container, float fElapsedTime) {
+		//Distance moved this frame
+		float DistanceThisFrame = KnockbackSpeed * fElapsedTime;
+		DistanceTraveled[Container] += DistanceThisFrame;
+
+		return DistanceTraveled[Container];
+	}
+	olc::vf2d ReturnPos(olc::vf2d PlayerPos, olc::vf2d EnemyPos, float fElapsedTime) {
+		olc::vf2d dir = (PlayerPos - EnemyPos).norm();
+
+		//Distance moved this frame
+		float DistanceThisFrame = KnockbackSpeed * fElapsedTime;
+		EnemyPos -= dir * DistanceThisFrame;
+
+		return EnemyPos;
+	}
+	int ReturnHit(std::vector<float> DistanceTraveled, int Container, int Hit) {
+
+		if (DistanceTraveled[Container] >= 2.0f) {
+			Hit = 0;
+			return Hit;
+		}
+		return Hit;
 	}
 };
 class Player {
@@ -298,20 +329,23 @@ public:
 	}
 };
 class Skeleton {
-public:
+private:
 	//Skele variables
 	std::vector<olc::vf2d> SkelePos;
 	olc::vf2d SkeleSize{ 1.1f, 0.6f };
+	//Hit variables
 	std::vector<int> SkeleHit;
-	std::vector<olc::vf2d> SkeleTarget;
 	std::vector<int> SkeleRedTimer;
-	std::vector<olc::vf2d> DirOfHit;
-	std::vector<olc::vf2d> DistTraveled;
-	std::vector<float> JumpDistTraveled;
+	std::vector<float> DistTraveled;
+	std::vector<float> JumpVelocity;
+	std::vector<int> JumpBool;
+	std::vector<olc::vf2d> PosBeforeJump;
 	//Player
 	olc::vf2d PlayerSize{ 0.7f, 0.8f };
 
 	olc::vf2d Zero{ 0.0f, 0.0f };
+
+	EnemyFunctions Enemy;
 
 	//Sprites
 	std::unique_ptr<olc::Sprite> SkeleRight;
@@ -322,16 +356,16 @@ public:
 	olc::Decal* SkeleRightDecal;
 	olc::Decal* SkeleRightHurtDecal;
 	olc::Decal* ShadowDecal;
+public:
 	void Spawn() {
 		if (SkelePos.size() < 1) {
 			for (int k = 0; k < 1; k++) {
 				SkelePos.push_back({ 305, 305 });
 				SkeleHit.push_back(0);
-				SkeleTarget.push_back({ SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f });
 				SkeleRedTimer.push_back(0);
-				DirOfHit.push_back({ 0.0f, 0.0f });
-				DistTraveled.push_back({ 0.0f, 0.0f });
-				JumpDistTraveled.push_back(0.0f);
+				DistTraveled.push_back(0.0f);
+				JumpBool.push_back(0);
+				PosBeforeJump.push_back({ 0.0f, 0.0f });
 			}
 		}
 	}
@@ -350,34 +384,6 @@ public:
 			}
 		}
 		return ClosestSkelePos;
-	}
-	void SkeletonKnockback(float fElapsedTime) {
-		float KnockbackSpeed = 12 * fElapsedTime;
-		float JumpSpeed = 8 * fElapsedTime;
-		for (int k = 0; k < SkelePos.size(); k++) {
-			if (SkeleHit[k] == 1) {
-				if ((DistTraveled[k].x <= -1.5f || DistTraveled[k].y <= -1.5f) && JumpDistTraveled[k] >= 2.0f) {
-					SkeleHit[k] = 0;
-					DistTraveled[k] = { 0.0f, 0.0f };
-					JumpDistTraveled[k] = 0.0f;
-				}
-				else {
-					SkelePos[k] -= DirOfHit[k] * KnockbackSpeed;
-					DistTraveled[k] += DirOfHit[k] * KnockbackSpeed;
-					if (JumpDistTraveled[k] < 1.0f) {
-						SkelePos[k].x -= JumpSpeed;
-						JumpDistTraveled[k] += JumpSpeed;
-					}
-					else if (JumpDistTraveled[k] >= 1.0f && JumpDistTraveled[k] < 2.0f) {
-						SkelePos[k].x += JumpSpeed;
-						JumpDistTraveled[k] += JumpSpeed;
-					}
-					else if (JumpDistTraveled[k] >= 2.0f) {
-
-					}
-				}
-			}
-		}
 	}
 	void Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float PlayerSpeed, bool PlayerCanAttack, float fElapsedTime) {
 		Spawn();
@@ -406,37 +412,52 @@ public:
 				&& pge->GetMouse(0).bPressed) {
 				//&& PlayerCanAttack == true) {
 				//Hit
-				DirOfHit[k] = (PlayerPos - SkelePos[k]).norm();
+				PosBeforeJump[k] = SkelePos[k];
+				JumpVelocity[k] = -sqrt(2.0f * 9.81 * 1.0f);
+				JumpBool[k] = 1;
 				SkeleRedTimer[k] = 1;
 				SkeleHit[k] = 1;
-				SkeleTarget[k] = { SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f };
-				SkeleTarget.push_back({ SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f });
-				SkeleTarget[k] = { SkelePos[k].x + 1.0f, SkelePos[k].y + 0.5f };
-				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 2.0f, 2.0f });
-				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, { 2.3f, 2.3f });
-				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
+				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
 			}
-			//If not hit, draw normal skeleton
-			else if (SkeleRedTimer[k] == 0) {
-				tv.DrawRectDecal({ SkelePos[k].x - 0.5f, SkelePos[k].y - 0.85f }, { 1.14f, 1.84f }, olc::RED);
+			if (SkeleHit[k] == 1) {
+				//Call the god foresaken knockback functions
+				//Jumping
+				if (JumpBool[k] == 1) {
+
+				}
+				//After jumping
+				if (JumpBool[k] == 0) {
+					SkelePos[k] = Enemy.ReturnPos(PlayerPos, SkelePos[k], fElapsedTime);
+					DistTraveled[k] = Enemy.ReturnDistance(DistTraveled, k, fElapsedTime);
+					SkeleHit[k] = Enemy.ReturnHit(DistTraveled, k, SkeleHit[k]);
+				}
 				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
 				tv.DrawDecal({ SkelePos[k].x - 1.0f, SkelePos[k].y - 1.0f }, SkeleRightDecal, { 2.0f, 2.0f });
-				tv.DrawRectDecal({ SkelePos[k] }, { 0.25f, 0.25f }, olc::RED);
+			}
+			//Reset Distance traveled
+			if (SkeleHit[k] == 0) {
+				DistTraveled[k] = 0.0f;
+			}
+			//If not hit, draw normal skeleton
+			if (SkeleRedTimer[k] == 0 && SkeleHit[k] == 0) {
+				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+				tv.DrawDecal({ SkelePos[k].x - 1.0f, SkelePos[k].y - 1.0f }, SkeleRightDecal, { 2.0f, 2.0f });
 			}
 			//Draw hurt skeleton for 10 frames
 			if (SkeleRedTimer[k] > 0) {
-				tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 2.0f, 2.0f });
-				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, { 2.3f, 2.3f });
-				tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
+				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
 				SkeleRedTimer[k]++;
-				if (SkeleRedTimer[k] == 10) {
-					tv.DrawDecal({ SkelePos[k].x + 0.05f, SkelePos[k].y + 1.1f }, ShadowDecal, { 2.0f, 2.0f });
-					tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightDecal, { 2.3f, 2.3f });
-					tv.DrawDecal({ SkelePos[k].x - 0.15f, SkelePos[k].y - 0.15f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+				if (SkeleRedTimer[k] == 11) {
+					tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+					tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
+					tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
 					SkeleRedTimer[k] = 0;
 				}
 			}
-			SkeletonKnockback(fElapsedTime);
 		}
 	}
 	void SkeleTest(olc::PixelGameEngine* pge, float fElapsedTime) {
