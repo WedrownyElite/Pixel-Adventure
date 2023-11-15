@@ -17,6 +17,8 @@
 float maxDistance = 2.0f; //How far away the object can be to still be in range.
 float maxAngle = M_PI / 4; //The total sweeping angle of the arch in either direction (PI/4 is 45 degrees in either direction, 90 degrees total).
 
+bool PlayerCanAttack = true;
+
 //GameState
 enum GameStateEnum { DEBUG, GAME, PAUSED, EXIT, MENU };
 std::vector<GameStateEnum> GameState;
@@ -92,7 +94,6 @@ public:
 	olc::vf2d PlayerPos{ 300.0f, 300.0f };
 	olc::vf2d MousePos;
 	float AttackCooldown = 0.0f;
-	bool PlayerCanAttack = true;
 	bool ArcherDir = true;
 	int CharacterHealth = 6;
 	float PlayerSpeed;
@@ -244,7 +245,7 @@ public:
 			pge->DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
 		}
 	}
-	void DrawDebugVariables(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, int CharacterHealth) {
+	void DrawDebugVariables(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, int CharacterHealth, bool PlayerCanAttack) {
 		//PlayerPos
 		std::string PlayerX = std::to_string(PlayerPos.x);
 		std::string PlayerY = std::to_string(PlayerPos.y);
@@ -268,6 +269,15 @@ public:
 
 		pge->DrawStringDecal({ 10.0f, 120.0f }, "Health", olc::WHITE, { 2.0f, 2.0f });
 		pge->DrawStringDecal({ 130.0f, 120.0f }, Health, olc::WHITE, { 2.0f, 2.0f });
+
+		std::string Attack = std::to_string(PlayerCanAttack);
+
+		pge->DrawStringDecal({ 10.0f, 160.0f }, "Attack", olc::WHITE, { 2.0f, 2.0f });
+		pge->DrawStringDecal({ 130.0f, 160.0f }, Attack, olc::WHITE, { 2.0f, 2.0f });
+
+		std::string FPS = std::to_string(pge->GetFPS());
+		pge->DrawStringDecal({ 500.0f, 10.0f }, "FPS", olc::WHITE, { 2.0f, 2.0f });
+		pge->DrawStringDecal({ 560.0f, 10.0f }, FPS, olc::WHITE, { 2.0f, 2.0f });
 	}
 	GameStateEnum PauseScreenInput(olc::PixelGameEngine* pge, bool resume_hovered, bool options_hovered, bool quit_hovered) {
 		if ((pge->GetMouse(0).bPressed && resume_hovered == true) || pge->GetKey(olc::Key::ESCAPE).bPressed) {
@@ -313,7 +323,7 @@ public:
 
 		//Draw variables
 		if (GameState[1] == DEBUG) {
-			DrawDebugVariables(tv, pge, PlayerPos, CharacterHealth);
+			DrawDebugVariables(tv, pge, PlayerPos, CharacterHealth, PlayerCanAttack);
 		}
 
 		PauseScreenInput(pge, resume_hovered, options_hovered, quit_hovered);
@@ -347,6 +357,35 @@ private:
 	olc::Decal* SkeleRightHurtDecal;
 	olc::Decal* ShadowDecal;
 public:
+	void Hurt(olc::TileTransformedView& tv, olc::vf2d PlayerPos, int Container, float fElapsedTime) {
+		if (SkeleHit[Container] == 1) {
+			SkeleHit[Container] = Enemy.ReturnHit(DistTraveled[Container], SkeleHit[Container]);
+			SkelePos[Container] = Enemy.Knockback(PlayerPos, SkelePos[Container], fElapsedTime);
+			DistTraveled[Container] = Enemy.ReturnDistTraveled(DistTraveled[Container], fElapsedTime);
+			if (SkeleRedTimer[Container] == 0) {
+				tv.DrawDecal({ SkelePos[Container].x - 0.95f, SkelePos[Container].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+				tv.DrawDecal({ SkelePos[Container].x - 1.0f, SkelePos[Container].y - 1.0f }, SkeleRightDecal, { 2.0f, 2.0f });
+			}
+		}
+		//Reset Distance traveled
+		if (SkeleHit[Container] == 0) {
+			DistTraveled[Container] = 0.0f;
+			JumpDist[Container] = 0.0f;
+		}
+		//Draw hurt skeleton for 10 frames
+		if (SkeleRedTimer[Container] > 0) {
+			tv.DrawDecal({ SkelePos[Container].x - 0.95f, SkelePos[Container].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+			tv.DrawDecal({ SkelePos[Container].x - 1.20f, SkelePos[Container].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
+			tv.DrawDecal({ SkelePos[Container].x - 1.20f, SkelePos[Container].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+			SkeleRedTimer[Container]++;
+			if (SkeleRedTimer[Container] == 21) {
+				tv.DrawDecal({ SkelePos[Container].x - 0.95f, SkelePos[Container].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+				tv.DrawDecal({ SkelePos[Container].x - 1.20f, SkelePos[Container].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
+				tv.DrawDecal({ SkelePos[Container].x - 1.20f, SkelePos[Container].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+				SkeleRedTimer[Container] = 0;
+			}
+		}
+	}
 	void Spawn() {
 		if (SkelePos.size() < 1) {
 			for (int k = 0; k < 1; k++) {
@@ -397,11 +436,11 @@ public:
 			float angleTowards = PointTo(PlayerPos, SkelePos[k]); //Calculate the angle towards a target.
 			float angleDiff = angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
 			if (
-				sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
-				&& abs(angleDiff) < maxAngle  //See if the target's angle is within the sweeping arc range.
-				&& pge->GetMouse(0).bPressed) {
-				//&& PlayerCanAttack == true) {
-				//Hit
+				(sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
+				&& abs(angleDiff) < maxAngle)  //See if the target's angle is within the sweeping arc range.
+				&& PlayerCanAttack == true) {
+				//&& pge->GetMouse(0).bPressed) {
+				//Initiate hit
 				JumpBool[k] = 1;
 				SkeleRedTimer[k] = 1;
 				SkeleHit[k] = 1;
@@ -409,37 +448,12 @@ public:
 				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
 				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
 			}
-			if (SkeleHit[k] == 1) {
-				SkeleHit[k] = Enemy.ReturnHit(DistTraveled[k], SkeleHit[k]);
-				SkelePos[k] = Enemy.Knockback(PlayerPos, SkelePos[k], fElapsedTime);
-				DistTraveled[k] = Enemy.ReturnDistTraveled(DistTraveled[k], fElapsedTime);
-				if (SkeleRedTimer[k] == 0) {
-					tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
-					tv.DrawDecal({ SkelePos[k].x - 1.0f, SkelePos[k].y - 1.0f }, SkeleRightDecal, { 2.0f, 2.0f });
-				}
-			}
-			//Reset Distance traveled
-			if (SkeleHit[k] == 0) {
-				DistTraveled[k] = 0.0f;
-				JumpDist[k] = 0.0f;
-			}
+			//Hit
+				Hurt(tv, PlayerPos, k, fElapsedTime);
 			//If not hit, draw normal skeleton
 			if (SkeleRedTimer[k] == 0 && SkeleHit[k] == 0) {
 				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
 				tv.DrawDecal({ SkelePos[k].x - 1.0f, SkelePos[k].y - 1.0f }, SkeleRightDecal, { 2.0f, 2.0f });
-			}
-			//Draw hurt skeleton for 10 frames
-			if (SkeleRedTimer[k] > 0) {
-				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
-				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
-				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
-				SkeleRedTimer[k]++;
-				if (SkeleRedTimer[k] == 21) {
-					tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
-					tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
-					tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
-					SkeleRedTimer[k] = 0;
-				}
 			}
 		}
 	}
@@ -639,7 +653,7 @@ public:
 		Player.HealthTest(this);
 
 		//Draw variables
-		GUI.DrawDebugVariables(tv, this, PlayerPos, CharacterHealth);
+		GUI.DrawDebugVariables(tv, this, PlayerPos, CharacterHealth, PlayerCanAttack);
 
 		//Draw Hearts
 		GUI.Hearts(this, CharacterHealth);
