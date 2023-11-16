@@ -3,46 +3,12 @@
 #define OLC_PGEX_TRANSFORMEDVIEW
 #include "olcPGEX_TransformedView.h"
 #include "olcUTIL_Camera2D.h"
-#include <iostream>
-#include <vector>
-#define _USE_MATH_DEFINES
-#include <cmath>
-#include <random>
-#include <algorithm>
 
-#ifndef M_PI
-#define M_PI 3.14159265358979323846264338327950288
-#endif
+#include "GUI.h"
+#include "GlobalVars.h"
+#include "MathFunctions.h"
 
-float maxDistance = 2.0f; //How far away the object can be to still be in range.
-float maxAngle = M_PI / 4; //The total sweeping angle of the arch in either direction (PI/4 is 45 degrees in either direction, 90 degrees total).
-
-bool PlayerCanAttack = true;
-
-//GameState
-enum GameStateEnum { DEBUG, GAME, PAUSED, EXIT, MENU };
 std::vector<GameStateEnum> GameState;
-
-//Math functions
-float angleDifference(float angle_1, float angle_2)
-{
-	angle_1 = fmod(angle_1, 2 * 3.14159f);
-	angle_2 = fmod(angle_2, 2 * 3.14159f);
-	float angle_diff = angle_1 - angle_2;
-
-	if (angle_diff > 3.14159f)
-		angle_diff -= 2 * 3.14159f;
-	else if (angle_diff < -3.14159f)
-		angle_diff += 2 * 3.14159f;
-
-	return -angle_diff;
-}
-olc::vf2d GetWorldMousePos(olc::TileTransformedView& tv, olc::PixelGameEngine* pge) {
-	return pge->GetMousePos() / 32 + tv.GetWorldOffset();
-}
-float PointTo(olc::vf2d pos1, olc::vf2d pos2) {
-	return atan2(pos2.y - pos1.y, pos2.x - pos1.x);
-}
 
 //Classes
 class EnemyFunctions {
@@ -183,152 +149,6 @@ public:
 		ShadowDecal = new olc::Decal(Shadow.get());
 	}
 };
-class GUI {
-public:
-	//Sprites
-	std::unique_ptr<olc::Sprite> PauseScreen;
-	std::unique_ptr<olc::Sprite> FullHeart;
-	std::unique_ptr<olc::Sprite> HalfHeart;
-	std::unique_ptr<olc::Sprite> EmptyHeart;
-
-	//Decals
-	olc::Decal* PauseScreenDecal;
-	olc::Decal* FullHeartDecal;
-	olc::Decal* HalfHeartDecal;
-	olc::Decal* EmptyHeartDecal;
-
-	void Initialize(olc::PixelGameEngine* pge) {
-		PauseScreen = std::make_unique<olc::Sprite>("./Sprites/PauseScreen.png");
-		FullHeart = std::make_unique<olc::Sprite>("./Sprites/FullHeart.png");
-		HalfHeart = std::make_unique<olc::Sprite>("./Sprites/HalfHeart.png");
-		EmptyHeart = std::make_unique<olc::Sprite>("./Sprites/EmptyHeart.png");
-
-		PauseScreenDecal = new olc::Decal(PauseScreen.get());
-		FullHeartDecal = new olc::Decal(FullHeart.get());
-		HalfHeartDecal = new olc::Decal(HalfHeart.get());
-		EmptyHeartDecal = new olc::Decal(EmptyHeart.get());
-	}
-	void Hearts(olc::PixelGameEngine* pge, int CharacterHealth) {
-		if (CharacterHealth == 6) {
-			pge->DrawDecal({ 10.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 47.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 84.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
-		}
-		if (CharacterHealth == 5) {
-			pge->DrawDecal({ 10.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 47.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 84.0f, 534.0f }, HalfHeartDecal, { 1.0f, 1.0f });
-		}
-		if (CharacterHealth == 4) {
-			pge->DrawDecal({ 10.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 47.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
-		}
-		if (CharacterHealth == 3) {
-			pge->DrawDecal({ 10.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 47.0f, 534.0f }, HalfHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
-		}
-		if (CharacterHealth == 2) {
-			pge->DrawDecal({ 10.0f, 534.0f }, FullHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 47.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
-		}
-		if (CharacterHealth == 1) {
-			pge->DrawDecal({ 10.0f, 534.0f }, HalfHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 47.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
-		}
-		if (CharacterHealth <= 0) {
-			pge->DrawDecal({ 10.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 47.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
-			pge->DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
-		}
-	}
-	void DrawDebugVariables(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, int CharacterHealth, bool PlayerCanAttack) {
-		//PlayerPos
-		std::string PlayerX = std::to_string(PlayerPos.x);
-		std::string PlayerY = std::to_string(PlayerPos.y);
-
-		pge->DrawStringDecal({ 10.0f, 10.0f }, "PlayerX", olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 140.0f, 10.0f }, PlayerX, olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 10.0f, 30.0f }, "PlayerY", olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 140.0f, 30.0f }, PlayerY, olc::WHITE, { 2.0f, 2.0f });
-
-		//MousePos
-		olc::vf2d MousePos = { GetWorldMousePos(tv, pge) };
-		std::string MouseX = std::to_string(MousePos.x);
-		std::string MouseY = std::to_string(MousePos.y);
-
-		pge->DrawStringDecal({ 10.0f, 60.0f }, "MouseX", olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 140.0f, 60.0f }, MouseX, olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 10.0f, 80.0f }, "MouseY", olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 140.0f, 80.0f }, MouseY, olc::WHITE, { 2.0f, 2.0f });
-
-		std::string Health = std::to_string(CharacterHealth);
-
-		pge->DrawStringDecal({ 10.0f, 120.0f }, "Health", olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 130.0f, 120.0f }, Health, olc::WHITE, { 2.0f, 2.0f });
-
-		std::string Attack = std::to_string(PlayerCanAttack);
-
-		pge->DrawStringDecal({ 10.0f, 160.0f }, "Attack", olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 130.0f, 160.0f }, Attack, olc::WHITE, { 2.0f, 2.0f });
-
-		std::string FPS = std::to_string(pge->GetFPS());
-		pge->DrawStringDecal({ 500.0f, 10.0f }, "FPS", olc::WHITE, { 2.0f, 2.0f });
-		pge->DrawStringDecal({ 560.0f, 10.0f }, FPS, olc::WHITE, { 2.0f, 2.0f });
-	}
-	GameStateEnum PauseScreenInput(olc::PixelGameEngine* pge, bool resume_hovered, bool options_hovered, bool quit_hovered) {
-		if ((pge->GetMouse(0).bPressed && resume_hovered == true) || pge->GetKey(olc::Key::ESCAPE).bPressed) {
-			GameState[0] = GameState[1];
-		}
-		if (pge->GetMouse(0).bPressed && options_hovered == true) {
-
-		}
-		if (pge->GetMouse(0).bPressed && quit_hovered == true) {
-			GameState[0] = MENU;
-		}
-		return GameState[0], GameState[1];
-	}
-	void doPauseScreen(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, int CharacterHealth, olc::vf2d PlayerPos) {
-		const olc::vf2d scale = { 1.0f, 1.0f };
-		//Resume variables
-		const bool resume_hovered = (pge->GetMouseX() >= 400 && pge->GetMouseY() >= 158 && pge->GetMouseX() <= 634 && pge->GetMouseY() <= 194);
-		const float resume_zoom = resume_hovered ? 5.5f : 5.0f;
-		const float resume_XCoord = resume_hovered ? 411.0f : 420.0f;
-		const float resume_YCoord = resume_hovered ? 168.0f : 170.0f;
-		//Options variables
-		const  bool options_hovered = (pge->GetMouseX() >= 400 && pge->GetMouseY() >= 250 && pge->GetMouseX() <= 675 && pge->GetMouseY() <= 285);
-		const float options_zoom = options_hovered ? 5.5f : 5.0f;
-		const float options_XCoord = options_hovered ? 388.0f : 400.0f;
-		const float options_YCoord = options_hovered ? 258.0f : 260.0f;
-		//Quit variables
-		const bool quit_hovered = (pge->GetMouseX() >= 460 && pge->GetMouseY() >= 350 && pge->GetMouseX() <= 620 && pge->GetMouseY() <= 385);
-		const float quit_zoom = quit_hovered ? 5.5 : 5.0f;
-		const float quit_XCoord = quit_hovered ? 453.0f : 460.0f;
-		const float quit_YCoord = quit_hovered ? 348.0f : 350.0f;
-
-		//Draw background (W.I.P)
-
-		//Draw hearts
-		Hearts(pge, CharacterHealth);
-
-		//Draw pause opacity
-		pge->DrawDecal({ 0.0f, 0.0f }, PauseScreenDecal, { 1.0f, 1.0f });
-
-		pge->DrawStringDecal({ resume_XCoord, resume_YCoord }, "RESUME", olc::WHITE, scale * resume_zoom);
-		pge->DrawStringDecal({ options_XCoord, options_YCoord }, "OPTIONS", olc::WHITE, scale * options_zoom);
-		pge->DrawStringDecal({ quit_XCoord, quit_YCoord }, "QUIT", olc::WHITE, scale * quit_zoom);
-
-		//Draw variables
-		if (GameState[1] == DEBUG) {
-			DrawDebugVariables(tv, pge, PlayerPos, CharacterHealth, PlayerCanAttack);
-		}
-
-		PauseScreenInput(pge, resume_hovered, options_hovered, quit_hovered);
-	}
-};
 class Skeleton {
 private:
 	//Skele variables
@@ -346,6 +166,7 @@ private:
 	olc::vf2d Zero{ 0.0f, 0.0f };
 
 	EnemyFunctions Enemy;
+	MathFunctions MF;
 
 	//Sprites
 	std::unique_ptr<olc::Sprite> SkeleRight;
@@ -431,10 +252,10 @@ public:
 			}
 
 			//Hit check
-			olc::vf2d MousePos = { GetWorldMousePos(tv, pge) };
+			olc::vf2d MousePos = { MF.GetWorldMousePos(tv, pge) };
 			olc::vf2d PlayerDir = (-(PlayerPos - MousePos).norm());
-			float angleTowards = PointTo(PlayerPos, SkelePos[k]); //Calculate the angle towards a target.
-			float angleDiff = angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
+			float angleTowards = MF.PointTo(PlayerPos, SkelePos[k]); //Calculate the angle towards a target.
+			float angleDiff = MF.angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
 			if (
 				(sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
 				&& abs(angleDiff) < maxAngle)  //See if the target's angle is within the sweeping arc range.
@@ -672,7 +493,7 @@ public:
 			return true;
 		}
 		if (GameState[0] == PAUSED) {
-			GUI.doPauseScreen(tv, this, CharacterHealth, PlayerPos);
+			GUI.doPauseScreen(tv, this, CharacterHealth, PlayerPos, PlayerCanAttack);
 		}
 		if (GameState[0] == EXIT) {
 			return false;
