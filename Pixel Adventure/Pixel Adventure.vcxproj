@@ -131,12 +131,15 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="EnemyFunctions.cpp" />
     <ClCompile Include="GUI.cpp" />
     <ClCompile Include="MathFunctions.cpp" />
     <ClCompile Include="Pixel Adventure.cpp" />
     <ClCompile Include="Player.cpp" />
+    <ClCompile Include="Skeleton.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="EnemyFunctions.h" />
     <ClInclude Include="GlobalVars.h" />
     <ClInclude Include="GUI.h" />
     <ClInclude Include="MathFunctions.h" />
@@ -144,6 +147,7 @@
     <ClInclude Include="olcPixelGameEngine.h" />
     <ClInclude Include="olcUTIL_Camera2D.h" />
     <ClInclude Include="Player.h" />
+    <ClInclude Include="Skeleton.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

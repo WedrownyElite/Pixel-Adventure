@@ -1,7 +1,10 @@
 #pragma once
 #include "olcPixelGameEngine.h"
 #include "olcPGEX_TransformedView.h"
+#define GlobalVars
 #include "GlobalVars.h"
+#define EnemyFunctions
+#include "EnemyFunctions.h"
 
 class Player {
 private:
@@ -25,8 +28,7 @@ private:
 	int CharacterHealth = 6;
 	float PlayerSpeed;
 
-	EnemyFunctions Enemy;
-
+public:
 	void Draw(olc::TileTransformedView& tv);
 	olc::vf2d Input(olc::PixelGameEngine* pge, float fElapsedTime);
 	bool AttackInput(olc::PixelGameEngine* pge, float fElapsedTime);

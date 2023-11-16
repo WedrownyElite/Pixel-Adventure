@@ -1,4 +1,7 @@
 #include "Player.h"
+#include "GlobalVars.h"
+
+std::vector<GameStateEnum> GameState;
 
 void Player::Draw(olc::TileTransformedView& tv) {
 	//Draw Archer
@@ -57,4 +60,29 @@ bool Player::AttackInput(olc::PixelGameEngine* pge, float fElapsedTime) {
 		}
 	}
 	return PlayerCanAttack;
+}
+GameStateEnum Player::EscapeInput(olc::PixelGameEngine* pge) {
+	if (pge->GetKey(olc::Key::ESCAPE).bPressed) {
+		GameState[1] = GameState[0];
+		GameState[0] = PAUSED;
+	}
+	return GameState[1], GameState[0];
+}
+int Player::HealthTest(olc::PixelGameEngine* pge) {
+	if (pge->GetKey(olc::Key::O).bPressed) {
+		CharacterHealth--;
+	}
+	return CharacterHealth;
+}
+void Player::Initialize(olc::PixelGameEngine* pge) {
+	//Sprites
+	PlayerRight = std::make_unique<olc::Sprite>("./Sprites/CharacterRightFacing.png");
+	PlayerLeft = std::make_unique<olc::Sprite>("./Sprites/CharacterLeftFacing.png");
+	PlayerDead = std::make_unique<olc::Sprite>("./Sprites/CharacterDeathPose.png");
+	Shadow = std::make_unique<olc::Sprite>("./Sprites/Shadow.png");
+	//Decals
+	PlayerRightDecal = new olc::Decal(PlayerRight.get());
+	PlayerLeftDecal = new olc::Decal(PlayerLeft.get());
+	PlayerDeadDecal = new olc::Decal(PlayerDead.get());
+	ShadowDecal = new olc::Decal(Shadow.get());
 }
