@@ -109,9 +109,6 @@ public:
 		return PlayerPos;
 	}
 	bool AttackInput(olc::PixelGameEngine* pge, float fElapsedTime) {
-		if (pge->GetMouse(0).bPressed && PlayerCanAttack == true) {
-			PlayerCanAttack = false;
-		}
 		if (PlayerCanAttack == false) {
 			if (AttackCooldown < 0.5f) {
 				AttackCooldown += fElapsedTime;
@@ -254,8 +251,8 @@ public:
 			//Hit check
 			olc::vf2d MousePos = { MF.GetWorldMousePos(tv, pge) };
 			olc::vf2d PlayerDir = (-(PlayerPos - MousePos).norm());
-			float angleTowards = MF.PointTo(PlayerPos, SkelePos[k]); //Calculate the angle towards a target.
-			float angleDiff = MF.angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
+			float angleTowards = PointTo(PlayerPos, SkelePos[k]); //Calculate the angle towards a target.
+			float angleDiff = angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
 			if (
 				(sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
 				&& abs(angleDiff) < maxAngle)  //See if the target's angle is within the sweeping arc range.
