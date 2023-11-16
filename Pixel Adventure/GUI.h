@@ -21,6 +21,6 @@ public:
     void Initialize(olc::PixelGameEngine* pge);
     void Hearts(olc::PixelGameEngine* pge, int CharacterHealth);
     void DrawDebugVariables(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, int CharacterHealth, bool PlayerCanAttack);
-    GameStateEnum PauseScreenInput(olc::PixelGameEngine* pge, bool resume_hovered, bool options_hovered, bool quit_hovered);
+    GlobalVars::GameStateEnum PauseScreenInput(olc::PixelGameEngine* pge, bool resume_hovered, bool options_hovered, bool quit_hovered);
     void doPauseScreen(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, int CharacterHealth, olc::vf2d PlayerPos, bool PlayerCanAttack);
 };

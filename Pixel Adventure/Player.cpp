@@ -1,8 +1,6 @@
 #include "Player.h"
 #include "GlobalVars.h"
 
-std::vector<GameStateEnum> GameState;
-
 void Player::Draw(olc::TileTransformedView& tv) {
 	//Draw Archer
 	if (ArcherDir == true) {
@@ -47,26 +45,23 @@ olc::vf2d Player::Input(olc::PixelGameEngine* pge, float fElapsedTime){
 	return PlayerPos;
 }
 bool Player::AttackInput(olc::PixelGameEngine* pge, float fElapsedTime) {
-	if (pge->GetMouse(0).bPressed && PlayerCanAttack == true) {
-		PlayerCanAttack = false;
-	}
-	if (PlayerCanAttack == false) {
+	if (GlobalVars::PlayerCanAttack == false) {
 		if (AttackCooldown < 0.5f) {
 			AttackCooldown += fElapsedTime;
 		}
 		if (AttackCooldown >= 0.5f) {
-			PlayerCanAttack = true;
+			GlobalVars::PlayerCanAttack = true;
 			AttackCooldown = 0.0f;
 		}
 	}
-	return PlayerCanAttack;
+	return GlobalVars::PlayerCanAttack;
 }
-GameStateEnum Player::EscapeInput(olc::PixelGameEngine* pge) {
+GlobalVars::GameStateEnum Player::EscapeInput(olc::PixelGameEngine* pge) {
 	if (pge->GetKey(olc::Key::ESCAPE).bPressed) {
-		GameState[1] = GameState[0];
-		GameState[0] = PAUSED;
+		GlobalVars::GameState[1] = GlobalVars::GameState[0];
+		GlobalVars::GameState[0] = GlobalVars::PAUSED;
 	}
-	return GameState[1], GameState[0];
+	return GlobalVars::GameState[1], GlobalVars::GameState[0];
 }
 int Player::HealthTest(olc::PixelGameEngine* pge) {
 	if (pge->GetKey(olc::Key::O).bPressed) {

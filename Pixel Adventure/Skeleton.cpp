@@ -1,13 +1,12 @@
 #include "Skeleton.h"
 #include "EnemyFunctions.h"
+#include "MathFunctions.h"
 
-
-EnemyFunctions Enemy;
 void Skeleton::Hurt(olc::TileTransformedView& tv, olc::vf2d PlayerPos, int Container, float fElapsedTime) {
 	if (SkeleHit[Container] == 1) {
-		SkeleHit[Container] = Enemy.ReturnHit(DistTraveled[Container], SkeleHit[Container]);
-		SkelePos[Container] = Enemy.Knockback(PlayerPos, SkelePos[Container], fElapsedTime);
-		DistTraveled[Container] = Enemy.ReturnDistTraveled(DistTraveled[Container], fElapsedTime);
+		SkeleHit[Container] = EnemyFunctions::ReturnHit(DistTraveled[Container], SkeleHit[Container]);
+		SkelePos[Container] = EnemyFunctions::Knockback(PlayerPos, SkelePos[Container], fElapsedTime);
+		DistTraveled[Container] = EnemyFunctions::ReturnDistTraveled(DistTraveled[Container], fElapsedTime);
 		if (SkeleRedTimer[Container] == 0) {
 			tv.DrawDecal({ SkelePos[Container].x - 0.95f, SkelePos[Container].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
 			tv.DrawDecal({ SkelePos[Container].x - 1.0f, SkelePos[Container].y - 1.0f }, SkeleRightDecal, { 2.0f, 2.0f });
@@ -77,22 +76,25 @@ void Skeleton::Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc
 		}
 
 		//Hit check
-		olc::vf2d MousePos = { MF.GetWorldMousePos(tv, pge) };
+		olc::vf2d MousePos = { MathFunctions::GetWorldMousePos(tv, pge) };
 		olc::vf2d PlayerDir = (-(PlayerPos - MousePos).norm());
-		float angleTowards = MF.PointTo(PlayerPos, SkelePos[k]); //Calculate the angle towards a target.
-		float angleDiff = MF.angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
-		if (
-			(sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < maxDistance //Check to see if the target is in range (distance formula)
-				&& abs(angleDiff) < maxAngle)  //See if the target's angle is within the sweeping arc range.
-			&& PlayerCanAttack == true) {
-			//&& pge->GetMouse(0).bPressed) {
-			//Initiate hit
-			JumpBool[k] = 1;
-			SkeleRedTimer[k] = 1;
-			SkeleHit[k] = 1;
-			tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
-			tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
-			tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+		float angleTowards = MathFunctions::PointTo(PlayerPos, SkelePos[k]); //Calculate the angle towards a target.
+		float angleDiff = MathFunctions::angleDifference(PlayerDir.polar().y, angleTowards); //Calculate the difference between the target and the angle.
+		if (pge->GetMouse(0).bPressed && PlayerCanAttack == true) {
+			PlayerCanAttack = false;
+			if (
+				(sqrt(pow(PlayerPos.x - SkelePos[k].x, 2) + pow(PlayerPos.y - SkelePos[k].y, 2)) < GlobalVars::maxDistance //Check to see if the target is in range (distance formula)
+					&& abs(angleDiff) < GlobalVars::maxAngle)  //See if the target's angle is within the sweeping arc range.
+				) {
+				//&& pge->GetMouse(0).bPressed) {
+				//Initiate hit
+				JumpBool[k] = 1;
+				SkeleRedTimer[k] = 1;
+				SkeleHit[k] = 1;
+				tv.DrawDecal({ SkelePos[k].x - 0.95f, SkelePos[k].y + 0.1f }, ShadowDecal, { 1.8f, 1.8f });
+				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightDecal, { 2.3f, 2.3f });
+				tv.DrawDecal({ SkelePos[k].x - 1.20f, SkelePos[k].y - 1.20f }, SkeleRightHurtDecal, { 2.3f, 2.3f });
+			}
 		}
 		//Hit
 		Hurt(tv, PlayerPos, k, fElapsedTime);

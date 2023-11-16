@@ -3,13 +3,13 @@
 
 
 class EnemyFunctions {
-private:
-	float JumpHeight = 1.0f;
-	float KnockbackSpeed = 12.0f;
-	float JumpSpeed = 6.0f;
 public:
-	float ReturnDistTraveled(float DistTraveled, float fElapsedTime);
-	int ReturnHit(float DistTraveled, int Hit);
-	olc::vf2d Knockback(olc::vf2d PlayerPos, olc::vf2d EnemyPos, float fElapsedTime);
+	static float JumpHeight;
+	static float KnockbackSpeed;
+	static float JumpSpeed;
+
+	static float ReturnDistTraveled(float DistTraveled, float fElapsedTime);
+	static int ReturnHit(float DistTraveled, int Hit);
+	static olc::vf2d Knockback(olc::vf2d PlayerPos, olc::vf2d EnemyPos, float fElapsedTime);
 
 };

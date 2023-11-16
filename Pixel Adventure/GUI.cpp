@@ -2,10 +2,6 @@
 #include "MathFunctions.h"
 #include "GlobalVars.h"
 
-std::vector<GameStateEnum> GameState;
-
-MathFunctions MF;
-
 void GUI::Initialize(olc::PixelGameEngine* pge) {
     PauseScreen = std::make_unique<olc::Sprite>("./Sprites/PauseScreen.png");
     FullHeart = std::make_unique<olc::Sprite>("./Sprites/FullHeart.png");
@@ -66,7 +62,7 @@ void GUI::DrawDebugVariables(olc::TileTransformedView& tv, olc::PixelGameEngine*
 	pge->DrawStringDecal({ 140.0f, 30.0f }, PlayerY, olc::WHITE, { 2.0f, 2.0f });
 
 	//MousePos
-	olc::vf2d MousePos = { MF.GetWorldMousePos(tv, pge) };
+	olc::vf2d MousePos = { MathFunctions::GetWorldMousePos(tv, pge) };
 	std::string MouseX = std::to_string(MousePos.x);
 	std::string MouseY = std::to_string(MousePos.y);
 
@@ -89,17 +85,17 @@ void GUI::DrawDebugVariables(olc::TileTransformedView& tv, olc::PixelGameEngine*
 	pge->DrawStringDecal({ 500.0f, 10.0f }, "FPS", olc::WHITE, { 2.0f, 2.0f });
 	pge->DrawStringDecal({ 560.0f, 10.0f }, FPS, olc::WHITE, { 2.0f, 2.0f });
 }
-GameStateEnum GUI::PauseScreenInput(olc::PixelGameEngine* pge, bool resume_hovered, bool options_hovered, bool quit_hovered) {
+GlobalVars::GameStateEnum GUI::PauseScreenInput(olc::PixelGameEngine* pge, bool resume_hovered, bool options_hovered, bool quit_hovered) {
 	if ((pge->GetMouse(0).bPressed && resume_hovered == true) || pge->GetKey(olc::Key::ESCAPE).bPressed) {
-		GameState[0] = GameState[1];
+		GlobalVars::GameState[0] = GlobalVars::GameState[1];
 	}
 	if (pge->GetMouse(0).bPressed && options_hovered == true) {
 
 	}
 	if (pge->GetMouse(0).bPressed && quit_hovered == true) {
-		GameState[0] = MENU;
+		GlobalVars::GameState[0] = GlobalVars::MENU;
 	}
-	return GameState[0], GameState[1];
+	return GlobalVars::GameState[0], GlobalVars::GameState[1];
 }
 void GUI::doPauseScreen(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, int CharacterHealth, olc::vf2d PlayerPos, bool PlayerCanAttack) {
 	const olc::vf2d scale = { 1.0f, 1.0f };
@@ -132,7 +128,7 @@ void GUI::doPauseScreen(olc::TileTransformedView& tv, olc::PixelGameEngine* pge,
 	pge->DrawStringDecal({ quit_XCoord, quit_YCoord }, "QUIT", olc::WHITE, scale * quit_zoom);
 
 	//Draw variables
-	if (GameState[1] == DEBUG) {
+	if (GlobalVars::GameState[1] == GlobalVars::DEBUG) {
 		DrawDebugVariables(tv, pge, PlayerPos, CharacterHealth, PlayerCanAttack);
 	}
 

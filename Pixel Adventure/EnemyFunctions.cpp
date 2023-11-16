@@ -1,5 +1,9 @@
 #include "EnemyFunctions.h"
 
+float EnemyFunctions::JumpHeight = 1.0f;
+float EnemyFunctions::KnockbackSpeed = 12.0f;
+float EnemyFunctions::JumpSpeed = 6.0f;
+
 float EnemyFunctions::ReturnDistTraveled(float DistTraveled, float fElapsedTime) {
 	float DistThisFrame = KnockbackSpeed * fElapsedTime;
 	DistTraveled += DistThisFrame;

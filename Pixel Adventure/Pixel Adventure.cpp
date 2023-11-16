@@ -4,20 +4,12 @@
 #include "olcPGEX_TransformedView.h"
 #include "olcUTIL_Camera2D.h"
 
-#define GUI
 #include "GUI.h"
-#define GlobalVers
 #include "GlobalVars.h"
-#define MathFunctions
 #include "MathFunctions.h"
-#define Player
 #include "Player.h"
-#define EnemyFunctions
 #include "EnemyFunctions.h"
-#define Skeleton
 #include "Skeleton.h"
-
-std::vector<GameStateEnum> GameState;
 
 class Pixel_Adventure : public olc::PixelGameEngine {
 public:
@@ -50,19 +42,23 @@ public:
 	olc::vf2d GoopSize = { 16.0f, 16.0f }; // Size of the Goop
 	bool ArchDrawn = false;
 
+	Player Player;
+	Skeleton Skeleton;
+	GUI GUI;
+
 	Pixel_Adventure() {
 		sAppName = "Pixel Adventure";
 	}
 	//User inputs
 	void PauseScreenInputs(bool resume_hovered, bool options_hovered, bool quit_hovered) {
 		if (GetMouse(0).bPressed && resume_hovered == true) {
-			GameState[0] = GameState[1];
+			GlobalVars::GameState[0] = GlobalVars::GameState[1];
 		}
 		if (GetMouse(0).bPressed && options_hovered == true) {
 
 		}
 		if (GetMouse(0).bPressed && quit_hovered == true) {
-			GameState[0] = EXIT;
+			GlobalVars::GameState[0] = GlobalVars::EXIT;
 		}
 	}
 	//UI
@@ -90,13 +86,13 @@ public:
 			Selection = 1;
 		}
 		if (Selection == 0 && GetKey(olc::Key::ENTER).bPressed) {
-			GameState[0] = GAME;
+			GlobalVars::GameState[0] = GlobalVars::GAME;
 		}
 		if (Selection == 1 && GetKey(olc::Key::ENTER).bPressed) {
-			GameState[0] = DEBUG;
+			GlobalVars::GameState[0] = GlobalVars::DEBUG;
 		}
 		if (GetKey(olc::Key::ESCAPE).bPressed) {
-			GameState[0] = EXIT;
+			GlobalVars::GameState[0] = GlobalVars::EXIT;
 		}
 	}
 	void DrawBGCamera() {
@@ -157,12 +153,12 @@ public:
 		//Get ClosestSkelePos
 		olc::vf2d ClosestSkelePos = Skeleton.ReturnClosestPos(PlayerPos);
 
-		bool PlayerCanAttack = Player.AttackInput(this, fElapsedTime);
+		GlobalVars::PlayerCanAttack = Player.AttackInput(this, fElapsedTime);
 
 		//If Closest Skeleton is above player
 		if (ClosestSkelePos.y <= PlayerPos.y) {
 			//Enemies
-			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack, fElapsedTime);
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, GlobalVars::PlayerCanAttack, fElapsedTime);
 
 			//Draw Archer
 			Player.Draw(tv);
@@ -174,43 +170,43 @@ public:
 			Player.Draw(tv);
 
 			//Enemies
-			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack, fElapsedTime);
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, GlobalVars::PlayerCanAttack, fElapsedTime);
 		}
 
 		//HealthTest
 		Player.HealthTest(this);
 
 		//Draw variables
-		GUI.DrawDebugVariables(tv, this, PlayerPos, CharacterHealth, PlayerCanAttack);
+		GUI.DrawDebugVariables(tv, this, PlayerPos, CharacterHealth, GlobalVars::PlayerCanAttack);
 
 		//Draw Hearts
 		GUI.Hearts(this, CharacterHealth);
 	}
 	bool OnUserUpdate(float fElapsedTime) override {
-		if (GameState[0] == MENU) {
+		if (GlobalVars::GameState[0] == GlobalVars::MENU) {
 			MainMenu();
 			return true;
 		}
-		if (GameState[0] == GAME) {
+		if (GlobalVars::GameState[0] == GlobalVars::GAME) {
 			GameGameState(fElapsedTime);
 			return true;
 		}
-		if (GameState[0] == DEBUG) {
+		if (GlobalVars::GameState[0] == GlobalVars::DEBUG) {
 			DebugGameState(fElapsedTime);
 			return true;
 		}
-		if (GameState[0] == PAUSED) {
-			GUI.doPauseScreen(tv, this, CharacterHealth, PlayerPos, PlayerCanAttack);
+		if (GlobalVars::GameState[0] == GlobalVars::PAUSED) {
+			GUI.doPauseScreen(tv, this, CharacterHealth, PlayerPos, GlobalVars::PlayerCanAttack);
 		}
-		if (GameState[0] == EXIT) {
+		if (GlobalVars::GameState[0] == GlobalVars::EXIT) {
 			return false;
 		}
 	}
 private:
 	bool OnUserCreate() override {
 
-		GameState.push_back(MENU);
-		GameState.push_back(MENU);
+		GlobalVars::GameState.push_back(GlobalVars::MENU);
+		GlobalVars::GameState.push_back(GlobalVars::MENU);
 
 		//Initialize Sprites for Skeletons
 		Skeleton.Initialize();
@@ -236,8 +232,8 @@ private:
 		for (int i = 0; i < vWorldMap.size(); i++)
 			vWorldMap[i] = ((rand() % 20) == 1) ? 1 : 0;
 
-		GameState.push_back(MENU);
-		GameState.push_back(MENU);
+		GlobalVars::GameState.push_back(GlobalVars::MENU);
+		GlobalVars::GameState.push_back(GlobalVars::MENU);
 
 
 

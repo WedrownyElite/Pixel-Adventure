@@ -132,6 +132,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="EnemyFunctions.cpp" />
+    <ClCompile Include="GlobalVars.cpp" />
     <ClCompile Include="GUI.cpp" />
     <ClCompile Include="MathFunctions.cpp" />
     <ClCompile Include="Pixel Adventure.cpp" />

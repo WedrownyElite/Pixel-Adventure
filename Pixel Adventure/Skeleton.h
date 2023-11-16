@@ -2,11 +2,8 @@
 #include "olcPixelGameEngine.h"
 #include "olcPGEX_TransformedView.h"
 
-#define EnemyFunctions
 #include "EnemyFunctions.h"
-#define MathFunctions
 #include "MathFunctions.h"
-#define GlobalVars
 #include "GlobalVars.h"
 
 class Skeleton {
