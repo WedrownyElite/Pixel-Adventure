@@ -38,7 +38,7 @@ public:
 
 	olcPGEX_Animator2D animator;
 
-	void PlayAnimation(olc::PixelGameEngine* pge, float fElapsedTime);
+	void PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, float fElapsedTime);
 	void Draw(olc::TileTransformedView& tv);
 	olc::vf2d Input(olc::PixelGameEngine* pge, float fElapsedTime);
 	bool AttackInput(olc::PixelGameEngine* pge, float fElapsedTime);

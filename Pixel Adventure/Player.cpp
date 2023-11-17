@@ -1,10 +1,10 @@
 #include "Player.h"
 #include "GlobalVars.h"
 
-void Player::PlayAnimation(olc::PixelGameEngine* pge, float fElapsedTime) {
+void Player::PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, float fElapsedTime) {
 	if (DrawAnim == false && pge->GetKey(olc::Key::A).bHeld) {
 
-		pge->DrawDecal(PlayerPos, animator.)
+		tv.DrawDecal({ PlayerPos.x - 1.9f, PlayerPos.y - 2.0f }, animator.GetAnim("Walk_Left"), { 4.0f, 4.0f });
 	}
 }
 void Player::Draw(olc::TileTransformedView& tv) {
