@@ -144,6 +144,8 @@
     <ClInclude Include="GlobalVars.h" />
     <ClInclude Include="GUI.h" />
     <ClInclude Include="MathFunctions.h" />
+    <ClInclude Include="olcPGEX_Animator2D.h" />
+    <ClInclude Include="olcPGEX_ResourceManager.h" />
     <ClInclude Include="olcPGEX_TransformedView.h" />
     <ClInclude Include="olcPixelGameEngine.h" />
     <ClInclude Include="olcUTIL_Camera2D.h" />

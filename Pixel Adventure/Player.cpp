@@ -1,6 +1,12 @@
 #include "Player.h"
 #include "GlobalVars.h"
 
+void Player::PlayAnimation(olc::PixelGameEngine* pge, float fElapsedTime) {
+	if (DrawAnim == false && pge->GetKey(olc::Key::A).bHeld) {
+
+		pge->DrawDecal(PlayerPos, animator.)
+	}
+}
 void Player::Draw(olc::TileTransformedView& tv) {
 	//Draw Archer
 	if (ArcherDir == true) {
@@ -18,16 +24,20 @@ olc::vf2d Player::Input(olc::PixelGameEngine* pge, float fElapsedTime){
 	if (pge->GetKey(olc::Key::LEFT).bHeld || (pge->GetKey(olc::Key::A).bHeld)) {
 		PlayerPos.x -= PlayerSpeed;
 		ArcherDir = false;
+		DrawAnim = false;
 	}
 	if (pge->GetKey(olc::Key::RIGHT).bHeld || (pge->GetKey(olc::Key::D).bHeld)) {
 		PlayerPos.x += PlayerSpeed;
 		ArcherDir = true;
+		DrawAnim = true;
 	}
 	if (pge->GetKey(olc::Key::UP).bHeld || (pge->GetKey(olc::Key::W).bHeld)) {
 		PlayerPos.y -= PlayerSpeed;
+		DrawAnim = ArcherDir;
 	}
 	if (pge->GetKey(olc::Key::DOWN).bHeld || (pge->GetKey(olc::Key::S).bHeld)) {
 		PlayerPos.y += PlayerSpeed;
+		DrawAnim = ArcherDir;
 	}
 
 	if (PlayerPos.x > 965) {
@@ -69,7 +79,7 @@ int Player::HealthTest(olc::PixelGameEngine* pge) {
 	}
 	return CharacterHealth;
 }
-void Player::Initialize(olc::PixelGameEngine* pge) {
+void Player::Initialize(olc::PixelGameEngine* pge, olcPGEX_ResourceManager &rm) {
 	//Sprites
 	PlayerRight = std::make_unique<olc::Sprite>("./Sprites/CharacterRightFacing.png");
 	PlayerLeft = std::make_unique<olc::Sprite>("./Sprites/CharacterLeftFacing.png");
@@ -80,4 +90,7 @@ void Player::Initialize(olc::PixelGameEngine* pge) {
 	PlayerLeftDecal = new olc::Decal(PlayerLeft.get());
 	PlayerDeadDecal = new olc::Decal(PlayerDead.get());
 	ShadowDecal = new olc::Decal(Shadow.get());
+
+	//Animations
+	animator.AddAnimation("Walk_Left", 0.6f, 6, rm.RM_Sprite("./Sprites/CharacterLeftFacing-Sheet.png"), { 0, 0 }, { 32, 32 }, { 0, 0 }, { 0, 0 }, true, false);
 }
