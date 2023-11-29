@@ -3,8 +3,9 @@
 
 void Player::PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, float fElapsedTime) {
 	if (DrawAnim == false && pge->GetKey(olc::Key::A).bHeld) {
-
-		tv.DrawDecal({ PlayerPos.x - 1.9f, PlayerPos.y - 2.0f }, animator.GetAnim("Walk_Left"), { 4.0f, 4.0f });
+		WalkLeft.UpdateAnimations(fElapsedTime);
+		
+		pge->DrawDecal({ PlayerPos.x - 1.9f, PlayerPos.y - 2.0f }, WalkLeft.GetAnim("Walk_Left"), {4.0f, 4.0f});
 	}
 }
 void Player::Draw(olc::TileTransformedView& tv) {
@@ -92,5 +93,5 @@ void Player::Initialize(olc::PixelGameEngine* pge, olcPGEX_ResourceManager &rm) 
 	ShadowDecal = new olc::Decal(Shadow.get());
 
 	//Animations
-	animator.AddAnimation("Walk_Left", 0.6f, 6, rm.RM_Sprite("./Sprites/CharacterLeftFacing-Sheet.png"), { 0, 0 }, { 32, 32 }, { 0, 0 }, { 0, 0 }, true, false);
+	WalkLeft.AddAnimation("Walk_Left", 0.6f, 6, rm.RM_Sprite("./Sprites/CharacterLeftFacing-Sheet.png"), { 0, 0 }, { 32, 32 }, { 0, 0 }, { 0, 0 }, true, false);
 }

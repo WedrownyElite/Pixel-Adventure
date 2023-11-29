@@ -36,7 +36,8 @@ public:
 	int CharacterHealth = 6;
 	float PlayerSpeed;
 
-	olcPGEX_Animator2D animator;
+	olcPGEX_Animator2D WalkLeft;
+	olcPGEX_Animator2D WalkRight;
 
 	void PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, float fElapsedTime);
 	void Draw(olc::TileTransformedView& tv);
