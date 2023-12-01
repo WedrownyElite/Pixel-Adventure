@@ -51,7 +51,7 @@ void GUI::Hearts(olc::PixelGameEngine* pge, int CharacterHealth) {
 		pge->DrawDecal({ 84.0f, 534.0f }, EmptyHeartDecal, { 1.0f, 1.0f });
 	}
 }
-void GUI::DrawDebugVariables(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, int CharacterHealth, bool PlayerCanAttack) {
+void GUI::DrawDebugVariables(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, int CharacterHealth, bool PlayerCanAttack, bool PlayerMoving) {
 	//PlayerPos
 	std::string PlayerX = std::to_string(PlayerPos.x);
 	std::string PlayerY = std::to_string(PlayerPos.y);
@@ -84,6 +84,10 @@ void GUI::DrawDebugVariables(olc::TileTransformedView& tv, olc::PixelGameEngine*
 	std::string FPS = std::to_string(pge->GetFPS());
 	pge->DrawStringDecal({ 500.0f, 10.0f }, "FPS", olc::WHITE, { 2.0f, 2.0f });
 	pge->DrawStringDecal({ 560.0f, 10.0f }, FPS, olc::WHITE, { 2.0f, 2.0f });
+
+	std::string PlayerMovingString = std::to_string(PlayerMoving);
+	pge->DrawStringDecal({ 10.0, 210.0f }, "Moving", olc::WHITE, { 2.0f, 2.0f });
+	pge->DrawStringDecal({ 100.0f, 210.0f }, PlayerMovingString, olc::WHITE, { 2.0f, 2.0f });
 }
 GlobalVars::GameStateEnum GUI::PauseScreenInput(olc::PixelGameEngine* pge, bool resume_hovered, bool options_hovered, bool quit_hovered) {
 	if ((pge->GetMouse(0).bPressed && resume_hovered == true) || pge->GetKey(olc::Key::ESCAPE).bPressed) {
@@ -129,7 +133,7 @@ void GUI::doPauseScreen(olc::TileTransformedView& tv, olc::PixelGameEngine* pge,
 
 	//Draw variables
 	if (GlobalVars::GameState[1] == GlobalVars::DEBUG) {
-		DrawDebugVariables(tv, pge, PlayerPos, CharacterHealth, PlayerCanAttack);
+		DrawDebugVariables(tv, pge, PlayerPos, CharacterHealth, PlayerCanAttack, PlayerMoving);
 	}
 
 	PauseScreenInput(pge, resume_hovered, options_hovered, quit_hovered);

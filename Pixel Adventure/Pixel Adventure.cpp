@@ -2,6 +2,8 @@
 #include "olcPixelGameEngine.h"
 #define OLC_PGEX_TRANSFORMEDVIEW
 #include "olcPGEX_TransformedView.h"
+#define ANIMATOR_IMPLEMENTATION
+#include "olcPGEX_Animator2D.h"
 #include "olcUTIL_Camera2D.h"
 
 #include "GUI.h"
@@ -34,6 +36,8 @@ public:
 	//Player variables
 	olc::vf2d PlayerPos = { 300, 300 };
 	bool ArcherDir = true;
+	bool PlayerCanAttack = true;
+	bool PlayerMoving = false;
 	int CharacterHealth = 6;
 	//Arch variables
 	float radius = 8.0f; // Radius of the arch (half of the desired length)
@@ -129,7 +133,7 @@ public:
 		DrawBGCamera();
 
 		//Draw Archer
-		Player.Draw(tv);
+		Player.Draw(tv, this, fElapsedTime);
 
 		//Draw Hearts
 		GUI.Hearts(this, CharacterHealth);
@@ -153,31 +157,31 @@ public:
 		//Get ClosestSkelePos
 		olc::vf2d ClosestSkelePos = Skeleton.ReturnClosestPos(PlayerPos);
 
-		GlobalVars::PlayerCanAttack = Player.AttackInput(this, fElapsedTime);
+		PlayerCanAttack = Player.AttackInput(this, fElapsedTime);
 
 		//If Closest Skeleton is above player
 		if (ClosestSkelePos.y <= PlayerPos.y) {
 			//Enemies
-			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, GlobalVars::PlayerCanAttack, fElapsedTime);
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack, fElapsedTime);
 
 			//Draw Archer
-			Player.Draw(tv);
+			Player.Draw(tv, this, fElapsedTime);
 		}
 
 		//If Closest Skeleton is below player
 		else {
 			//Draw Archer
-			Player.Draw(tv);
+			Player.Draw(tv, this, fElapsedTime);
 
 			//Enemies
-			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, GlobalVars::PlayerCanAttack, fElapsedTime);
+			Skeleton.Draw(tv, this, PlayerPos, PlayerSpeed, PlayerCanAttack, fElapsedTime);
 		}
 
 		//HealthTest
 		Player.HealthTest(this);
 
 		//Draw variables
-		GUI.DrawDebugVariables(tv, this, PlayerPos, CharacterHealth, GlobalVars::PlayerCanAttack);
+		GUI.DrawDebugVariables(tv, this, PlayerPos, CharacterHealth, PlayerCanAttack, PlayerMoving);
 
 		//Draw Hearts
 		GUI.Hearts(this, CharacterHealth);
@@ -196,7 +200,7 @@ public:
 			return true;
 		}
 		if (GlobalVars::GameState[0] == GlobalVars::PAUSED) {
-			GUI.doPauseScreen(tv, this, CharacterHealth, PlayerPos, GlobalVars::PlayerCanAttack);
+			GUI.doPauseScreen(tv, this, CharacterHealth, PlayerPos, PlayerCanAttack);
 		}
 		if (GlobalVars::GameState[0] == GlobalVars::EXIT) {
 			return false;

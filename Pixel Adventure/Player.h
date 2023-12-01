@@ -3,8 +3,6 @@
 #include "olcPGEX_TransformedView.h"
 #include "GlobalVars.h"
 #include "EnemyFunctions.h"
-#define ANIMATOR_IMPLEMENTATION
-#include "olcPGEX_Animator2D.h"
 #include "MathFunctions.h"
 
 class Player {
@@ -33,11 +31,10 @@ public:
 	int CharacterHealth = 6;
 	float PlayerSpeed;
 
-	olcPGEX_Animator2D animator;
 	MathFunctions MF;
 
 	void PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float fElapsedTime);
-	void Draw(olc::TileTransformedView& tv);
+	void Draw(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, float fElapsedTime);
 	olc::vf2d Input(olc::PixelGameEngine* pge, float fElapsedTime);
 	bool AttackInput(olc::PixelGameEngine* pge, float fElapsedTime);
 	GlobalVars::GameStateEnum EscapeInput(olc::PixelGameEngine* pge);
