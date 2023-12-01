@@ -15,6 +15,9 @@ float MathFunctions::angleDifference(float angle_1, float angle_2) {
 olc::vf2d MathFunctions::GetWorldMousePos(olc::TileTransformedView& tv, olc::PixelGameEngine* pge) {
 	return pge->GetMousePos() / 32 + tv.GetWorldOffset();
 }
+olc::vf2d MathFunctions::GetPlayerPos(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos) {
+	return PlayerPos / 32 + tv.GetWorldOffset();
+}
 float MathFunctions::PointTo(olc::vf2d pos1, olc::vf2d pos2) {
 	return atan2(pos2.y - pos1.y, pos2.x - pos1.x);
 }
