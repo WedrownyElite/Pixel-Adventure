@@ -22,7 +22,7 @@ void Player::Draw(olc::TileTransformedView& tv) {
 		tv.DrawDecal({ PlayerPos.x - 1.9f, PlayerPos.y - 2.0f }, PlayerLeftDecal, { 4.0f, 4.0f });
 	}
 }
-olc::vf2d Player::Input(olc::PixelGameEngine* pge, float fElapsedTime){
+olc::vf2d Player::Input(olc::PixelGameEngine* pge, float fElapsedTime) {
 	PlayerSpeed = 8.0f * fElapsedTime;
 	// Handle input and move the player
 	if (pge->GetKey(olc::Key::LEFT).bHeld || (pge->GetKey(olc::Key::A).bHeld)) {

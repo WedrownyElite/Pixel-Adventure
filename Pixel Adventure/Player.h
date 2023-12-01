@@ -8,7 +8,7 @@
 
 class Player {
 public:
-	
+
 	//False == DrawLeft, True == DrawRight
 	bool DrawAnim = false;
 	//Sprites
