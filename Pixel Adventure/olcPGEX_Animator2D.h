@@ -252,6 +252,9 @@
 #ifndef OLC_PGEX_ANIMATOR
 #define OLC_PGEX_ANIMATOR
 
+#include "olcPixelGameEngine.h"
+
+
 class olcPGEX_Animator2D : public olc::PGEX
 {
 public:
