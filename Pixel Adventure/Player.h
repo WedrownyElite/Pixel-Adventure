@@ -4,7 +4,7 @@
 #include "GlobalVars.h"
 #include "EnemyFunctions.h"
 #include "olcPGEX_Animator2D.h"
-#include "olcPGEX_ResourceManager.h"
+#include "MathFunctions.h"
 
 class Player {
 public:
@@ -16,17 +16,13 @@ public:
 	std::unique_ptr<olc::Sprite> PlayerLeft;
 	std::unique_ptr<olc::Sprite> PlayerDead;
 	std::unique_ptr<olc::Sprite> Shadow;
+	std::unique_ptr<olc::Sprite> WalkLeftSS;
 
 	//Decals
 	olc::Decal* PlayerRightDecal;
 	olc::Decal* PlayerLeftDecal;
 	olc::Decal* PlayerDeadDecal;
 	olc::Decal* ShadowDecal;
-
-	//SpriteSheets
-	std::unique_ptr<olc::Sprite> WalkLeft;
-
-	//SpriteSheets decals
 	olc::Decal* WalkLeftDecal;
 
 	olc::vf2d PlayerPos{ 300.0f, 300.0f };
@@ -36,14 +32,16 @@ public:
 	int CharacterHealth = 6;
 	float PlayerSpeed;
 
+	olcPGEX_Animator2D animator;
+	MathFunctions MF;
 	olcPGEX_Animator2D WalkLeft;
 	olcPGEX_Animator2D WalkRight;
 
-	void PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, float fElapsedTime);
+	void PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float fElapsedTime);
 	void Draw(olc::TileTransformedView& tv);
 	olc::vf2d Input(olc::PixelGameEngine* pge, float fElapsedTime);
 	bool AttackInput(olc::PixelGameEngine* pge, float fElapsedTime);
 	GlobalVars::GameStateEnum EscapeInput(olc::PixelGameEngine* pge);
 	int HealthTest(olc::PixelGameEngine* pge);
-	void Initialize(olc::PixelGameEngine* pge, olcPGEX_ResourceManager &rm);
+	void Initialize(olc::PixelGameEngine* pge);
 };
