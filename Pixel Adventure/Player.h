@@ -3,7 +3,7 @@
 #include "olcPGEX_TransformedView.h"
 #include "GlobalVars.h"
 #include "EnemyFunctions.h"
-#define OLC_PGEX_ANIMATOR2D
+#define ANIMATOR_IMPLEMENTATION
 #include "olcPGEX_Animator2D.h"
 #include "MathFunctions.h"
 
