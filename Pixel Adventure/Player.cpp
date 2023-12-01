@@ -1,11 +1,14 @@
 #include "Player.h"
 #include "GlobalVars.h"
 
-void Player::PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, float fElapsedTime) {
+void Player::PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float fElapsedTime) {
 	if (DrawAnim == false && pge->GetKey(olc::Key::A).bHeld) {
+
 		WalkLeft.UpdateAnimations(fElapsedTime);
-		
-		pge->DrawDecal({ PlayerPos.x - 1.9f, PlayerPos.y - 2.0f }, WalkLeft.GetAnim("Walk_Left"), {4.0f, 4.0f});
+		//Set PlayerPos to tv offset
+		PlayerPos = MF.GetPlayerPos(tv, pge, PlayerPos);
+		//Draw animation
+		WalkLeft.DrawAnimationFrame(PlayerPos);
 	}
 }
 void Player::Draw(olc::TileTransformedView& tv) {
@@ -80,18 +83,20 @@ int Player::HealthTest(olc::PixelGameEngine* pge) {
 	}
 	return CharacterHealth;
 }
-void Player::Initialize(olc::PixelGameEngine* pge, olcPGEX_ResourceManager &rm) {
+void Player::Initialize(olc::PixelGameEngine* pge) {
 	//Sprites
 	PlayerRight = std::make_unique<olc::Sprite>("./Sprites/CharacterRightFacing.png");
 	PlayerLeft = std::make_unique<olc::Sprite>("./Sprites/CharacterLeftFacing.png");
 	PlayerDead = std::make_unique<olc::Sprite>("./Sprites/CharacterDeathPose.png");
 	Shadow = std::make_unique<olc::Sprite>("./Sprites/Shadow.png");
+	WalkLeftSS = std::make_unique<olc::Sprite>("./Sprites/CharacterLeftFacing-Sheet.png");
 	//Decals
 	PlayerRightDecal = new olc::Decal(PlayerRight.get());
 	PlayerLeftDecal = new olc::Decal(PlayerLeft.get());
 	PlayerDeadDecal = new olc::Decal(PlayerDead.get());
 	ShadowDecal = new olc::Decal(Shadow.get());
+	WalkLeftDecal = new olc::Decal(WalkLeftSS.get());
 
 	//Animations
-	WalkLeft.AddAnimation("Walk_Left", 0.6f, 6, rm.RM_Sprite("./Sprites/CharacterLeftFacing-Sheet.png"), { 0, 0 }, { 32, 32 }, { 0, 0 }, { 0, 0 }, true, false);
+	WalkLeft.AddAnimation("Walk_Left", 0.6f, 6, WalkLeftDecal, { 0, 0 }, { 32, 32 }, { 0, 0 }, { 0, 0 }, true, false);
 }
