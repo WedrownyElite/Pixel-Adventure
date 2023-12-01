@@ -4,11 +4,11 @@
 void Player::PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float fElapsedTime) {
 	if (DrawAnim == false && pge->GetKey(olc::Key::A).bHeld) {
 
-		WalkLeft.UpdateAnimations(fElapsedTime);
+		animator.UpdateAnimations(fElapsedTime);
 		//Set PlayerPos to tv offset
 		PlayerPos = MF.GetPlayerPos(tv, pge, PlayerPos);
 		//Draw animation
-		WalkLeft.DrawAnimationFrame(PlayerPos);
+		animator.DrawAnimationFrame(PlayerPos);
 	}
 }
 void Player::Draw(olc::TileTransformedView& tv) {
@@ -98,5 +98,5 @@ void Player::Initialize(olc::PixelGameEngine* pge) {
 	WalkLeftDecal = new olc::Decal(WalkLeftSS.get());
 
 	//Animations
-	WalkLeft.AddAnimation("Walk_Left", 0.6f, 6, WalkLeftDecal, { 0, 0 }, { 32, 32 }, { 0, 0 }, { 0, 0 }, true, false);
+	animator.AddAnimation("Walk_Left", 0.6f, 6, WalkLeftDecal, { 0, 0 }, { 32, 32 }, { 0, 0 }, { 0, 0 }, true, false);
 }

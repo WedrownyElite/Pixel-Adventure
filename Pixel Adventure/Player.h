@@ -3,6 +3,7 @@
 #include "olcPGEX_TransformedView.h"
 #include "GlobalVars.h"
 #include "EnemyFunctions.h"
+#define OLC_PGEX_ANIMATOR2D
 #include "olcPGEX_Animator2D.h"
 #include "MathFunctions.h"
 
@@ -34,8 +35,6 @@ public:
 
 	olcPGEX_Animator2D animator;
 	MathFunctions MF;
-	olcPGEX_Animator2D WalkLeft;
-	olcPGEX_Animator2D WalkRight;
 
 	void PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float fElapsedTime);
 	void Draw(olc::TileTransformedView& tv);
