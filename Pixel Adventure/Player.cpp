@@ -1,6 +1,7 @@
 #include "Player.h"
 #include "GlobalVars.h"
 
+#include "olcPGEX_Animator2D.h"
 
 void Player::PlayAnimation(olc::TileTransformedView& tv, olc::PixelGameEngine* pge, olc::vf2d PlayerPos, float fElapsedTime) {
 	if (DrawAnim == false && pge->GetKey(olc::Key::A).bHeld) {
